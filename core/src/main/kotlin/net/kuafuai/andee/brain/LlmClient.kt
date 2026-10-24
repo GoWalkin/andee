@@ -70,6 +70,18 @@ class LlmClient(
     @Volatile private var reasoningEffort = reasoningEffort
 
     /**
+     * Set once a gateway has refused the `thinking` / `reasoning_effort` fields.
+     *
+     * Those two are DeepSeek's and Ark's dialect, not the OpenAI schema, and a
+     * strict OpenAI-compatible router (FreeLLMAPI, some free-tier upstreams, a
+     * plain OpenAI model) answers them with a 400 that names the field. Rather
+     * than a setting the user has to know to flip, the first such 400 retries the
+     * same request without them and every later request leaves them out — the
+     * backend has told us what it speaks. GoWalkin fork change.
+     */
+    @Volatile private var omitThinking = false
+
+    /**
      * Change what the next request asks for, without touching the endpoint or
      * the key. Those two are the identity of the backend; these three are only
      * how it is asked, so a settings change to them has no reason to cost the
@@ -150,13 +162,30 @@ class LlmClient(
         if (tools.length() > 0) {
             body.put("tools", tools).put("tool_choice", "auto")
         }
-        if (thinking && !noThinking) {
-            body.put("thinking", JSONObject().put("type", "enabled"))
-            body.put("reasoning_effort", reasoningEffort)
-        } else {
-            body.put("thinking", JSONObject().put("type", "disabled"))
+        val sentThinking = !omitThinking
+        if (sentThinking) {
+            if (thinking && !noThinking) {
+                body.put("thinking", JSONObject().put("type", "enabled"))
+                body.put("reasoning_effort", reasoningEffort)
+            } else {
+                body.put("thinking", JSONObject().put("type", "disabled"))
+            }
         }
 
+        val text = try {
+            post(body)
+        } catch (e: LlmHttpException) {
+            if (!sentThinking || !rejectsThinkingFields(e)) throw e
+            omitThinking = true
+            body.remove("thinking")
+            body.remove("reasoning_effort")
+            post(body)
+        }
+        return parse(text)
+    }
+
+    /** One POST to `/chat/completions`: the raw body on success, [LlmHttpException] otherwise. */
+    private fun post(body: JSONObject): String {
         val req = Request.Builder()
             .url("$baseUrl/chat/completions")
             .addHeader("Authorization", "Bearer $apiKey")
@@ -181,7 +210,10 @@ class LlmClient(
         } finally {
             current = null
         }
+        return text
+    }
 
+    private fun parse(text: String): Reply {
         val root = JSONObject(text)
         val choice = root.optJSONArray("choices")?.optJSONObject(0)
             ?: throw IllegalStateException("LLM reply has no choices: ${text.take(400)}")
@@ -299,5 +331,18 @@ class LlmClient(
 
         fun textBlock(text: String): JSONObject =
             JSONObject().put("type", "text").put("text", text)
+
+        /**
+         * Whether a 4xx is the gateway refusing our two non-OpenAI fields, as
+         * opposed to anything else a 400 can mean (context overflow, a malformed
+         * image, an unknown model). Only a body that **names** `thinking` or
+         * `reasoning_effort` earns the silent retry — a retry on any 400 would
+         * double the cost of every genuinely bad request.
+         */
+        internal fun rejectsThinkingFields(e: LlmHttpException): Boolean {
+            if (e.code != 400 && e.code != 422) return false
+            val b = e.body.lowercase()
+            return "thinking" in b || "reasoning_effort" in b
+        }
     }
 }

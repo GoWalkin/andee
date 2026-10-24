@@ -28,6 +28,31 @@ hash into `versionName` at build time would close this hole; it is not implement
 
 ## [Unreleased]
 
+### GoWalkin fork — China assistant (see FORK.md)
+
+- **Bridge mode** for someone who cannot read Chinese: every on-screen label explained in English with the Chinese
+  in parentheses, messages to others written in Chinese and shown with an English back-translation first, mainland
+  defaults (phone + SMS login, no Google sign-in). Settings → China assistant.
+- **Autonomy switch** (Semi-auto / Assist / Full-auto), enforced in code by `cn/ActionGuard` at the tap
+  chokepoint: pay buttons always refused, orders (calling a car, submitting an order) need a fresh yes, BOSS直聘
+  applications capped per day and paced, free-text sends in guarded chat apps follow the autonomy level.
+- **Ready-made scenes**: *Job hunt on BOSS直聘* and *Get me a ride* (DiDi, Pony.ai / Apollo Go robotaxis).
+- **`pick_document` / `read_document`**: read a CV (PDF, .docx, text, image) through the system file picker.
+- **App aliases**: `launch_app` understands English and pinyin names (DiDi, Gaode, Boss…).
+- **FreeLLMAPI / strict OpenAI gateways**: loopback cleartext allowed; `thinking`/`reasoning_effort` dropped
+  automatically when a gateway rejects them; new self-check row tests that the model can see images and call tools.
+- Recruiter notifications that arrive mid-task are queued and handled when the task ends, instead of dropped.
+- The update check is off unless `VERSION_API_BASE` is set in `local.properties`.
+- CI builds `feature/**` branches and runs `:core:test`.
+- Guard hardening: Chinese phrases of four or more characters match by prefix (确认呼叫快车 is an order); a
+  tap-length swipe counts as a tap and slide-to-confirm controls as orders or payments; an approval only covers an
+  order if its question stated the price, and a send if it showed the text.
+- English voice for the bridge (`tts_voice_en`, default `en_female_dacey_uranus_bigtts`); Chinese glosses are not
+  read aloud by it. English app names in notification rows.
+- One-tap Translate key on the ball's bar (bridge mode only).
+- Debug build allows plain HTTP to any host (FreeLLMAPI on a home PC); CI signs the release build when the
+  `ANDEE_*` secrets are present.
+
 ## [0.5.3] - 2026-10-22
 
 **You can now tell it to stop, out loud, and it will.** "Exit Andee" / "Take a break" (and their

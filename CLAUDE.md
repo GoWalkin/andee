@@ -673,6 +673,40 @@ Andees on different devices pair and ask each other for help. Read `PeerTasks`' 
   line), and `ask_friend`'s description tells it to *ask* when the user says so — the friend's owner decides on
   their own card; refusing on their behalf was the measured failure.
 
+## GoWalkin fork (`cn/`): a China assistant for someone who cannot read Chinese
+
+This checkout is the **GoWalkin fork** (GoWalkin/andee). [FORK.md](FORK.md) lists what it adds and every upstream
+file it touches; `docs/china-setup.md` is the user-facing setup. New logic lives in `core/.../cn/` and
+`app/.../cn/`; upstream files carry only hook lines marked `GoWalkin fork`, so `git merge upstream/main` stays
+small. Keep it that way.
+
+Invariants a change here must not break:
+
+- **Every gesture goes through the action guard.** `ScreenController.tap` / `longPress` call `guardAction`,
+  `swipe` calls `guardSwipe`, `submitInput` calls `ActionGate.checkSubmit`, and the (unused) click-by-id paths
+  guard too. A new way of touching the screen that skips these is a way round "pay is refused, orders need a
+  yes" — the rule `ActionGuard` exists to make true in code rather than in the prompt. The guard reads the labels
+  of *every* node under the finger (live tree first, dump index as fallback) and acts on the most serious kind.
+- **Label matching is the whole guard, so test it.** `ActionGuard.matches`: a Chinese phrase of ≥ 4 characters
+  matches by prefix (确认呼叫 covers 确认呼叫快车); shorter or Latin phrases need a word boundary (支付宝 is not
+  支付). A real swipe is only checked against slide-to-confirm phrases, never the row it started on. An approval
+  covers only what its question said (`approvalCovers`: an order needs a price, a send needs the text).
+  `ActionGuardTest` is the table — add the real label there before trusting it. Tree-blind panes
+  (mini-programs) yield no labels and are not guarded; say so rather than pretend.
+- **Fork tools live in `CnTools`, not `ToolSchemas`.** `GoldenTextTest` pins `ToolSchemas` and the base prompt byte
+  for byte; `CnTools.TOOLS` is wired like `PeerTasks` (`AndroidBrainHost.toolLists` / `methodOf`) and dispatched by
+  `CommandDispatcher` so the turn and lock-screen guards still apply.
+- **`BridgePrompt` (§14 bridge, §15 autonomy) is appended through `BrainHost.extraPrompt()`** and must be constant
+  for a given setting — same cache rule as the persona. The autonomy level has **no tool**; only the settings card
+  writes it.
+- **Presets are `cn/ChinaPresets.kt`**, generated from one script with both languages; `ScenePresetsTest` checks
+  their budgets in CI (summary ≤ 80, prompt ≤ 3000). Every tool a preset names must exist.
+- **English voice:** with the bridge on, `VoiceConfig.lookSpeaker` returns `tts_voice_en`
+  (default `en_female_dacey_uranus_bigtts`), and `TtsController.speakImpl` drops Chinese from what an English voice
+  speaks (`SpokenEnglish`) — the scrollback and subtitles keep it.
+- **Verify on a device by the log**: `adb logcat -s Body:*` and look for `guard refused …` / `guard allowed …`. JVM
+  tests: build `:core` alone with JDK 17 when the Android SDK is not available.
+
 ## Existing but not wired up
 
 Don't mistake these for live code paths or accidentally "fix" callers into existence:

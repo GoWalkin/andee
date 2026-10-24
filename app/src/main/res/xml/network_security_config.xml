@@ -13,4 +13,14 @@
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="true">124.71.176.202</domain>
     </domain-config>
+
+    <!-- GoWalkin fork: an LLM router running on this same phone (FreeLLMAPI in
+         Termux, http://127.0.0.1:3001/v1) is plain HTTP by nature. Loopback
+         never leaves the device, so this hole widens nothing on the network;
+         without it every brain request dies as "CLEARTEXT communication to
+         127.0.0.1 not permitted". The debug copy already had these two. -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">127.0.0.1</domain>
+        <domain includeSubdomains="true">localhost</domain>
+    </domain-config>
 </network-security-config>

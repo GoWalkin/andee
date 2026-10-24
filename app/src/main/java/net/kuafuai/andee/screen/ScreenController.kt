@@ -1030,6 +1030,7 @@ class ScreenController(
         val pkg: String,         // owning app, from the node's root at dump time
         val viewId: String?,     // resource id if any
         val bounds: String,      // "l,t,r,b" in pixels at dump time
+        val label: String = "",  // what the outline showed for it — for the action guard (GoWalkin)
     )
 
     private val eidLock = Any()
@@ -1157,6 +1158,7 @@ class ScreenController(
     }
 
     fun tap(x: Int, y: Int, snapFrame: FloatArray? = null): JSONObject {
+        guardAction(x, y)
         val path = Path().apply { moveTo(x.toFloat(), y.toFloat()) }
         // 150ms, not the classic 100ms: WeChat's Moments like/comment buttons
         // (and other touch-filtering surfaces) ignore injections shorter than
@@ -1570,6 +1572,9 @@ class ScreenController(
             val matches = root.findAccessibilityNodeInfosByViewId(id).orEmpty()
             val target = matches.firstOrNull() ?: throw IllegalArgumentException("no node with id: $id")
             try {
+                // GoWalkin fork: a click by id is a tap without a gesture — same guard.
+                val r = Rect().also { target.getBoundsInScreen(it) }
+                guardAction(r.centerX(), r.centerY())
                 val performed = target.performAction(AccessibilityNodeInfo.ACTION_CLICK)
                 return JSONObject().put("performed", performed).put("id", id).put("matches", matches.size)
             } finally {
@@ -1590,6 +1595,7 @@ class ScreenController(
      * the stroke shrinks the coast but never removes it.
      */
     fun swipe(x1: Int, y1: Int, x2: Int, y2: Int, durationMs: Long, fling: Boolean): JSONObject {
+        guardSwipe(x1, y1, x2, y2)
         if (fling) guardFlingStreak(y2 > y1) else synchronized(loopLock) { flingStreak = 0 }
         val path = Path().apply {
             moveTo(x1.toFloat(), y1.toFloat())
@@ -1709,6 +1715,7 @@ class ScreenController(
     }
 
     fun longPress(x: Int, y: Int, durationMs: Long): JSONObject {
+        guardAction(x, y)
         val path = Path().apply { moveTo(x.toFloat(), y.toFloat()) }
         val stroke = GestureDescription.StrokeDescription(path, 0L, durationMs)
         val result = guardedGesture(android.graphics.Rect(x - 4, y - 4, x + 4, y + 4)) {
@@ -1727,6 +1734,9 @@ class ScreenController(
             val matches = root.findAccessibilityNodeInfosByViewId(id).orEmpty()
             val target = matches.firstOrNull() ?: throw IllegalArgumentException("no node with id: $id")
             try {
+                // GoWalkin fork: a click by id is a tap without a gesture — same guard.
+                val r = Rect().also { target.getBoundsInScreen(it) }
+                guardAction(r.centerX(), r.centerY())
                 val performed = target.performAction(AccessibilityNodeInfo.ACTION_LONG_CLICK)
                 return JSONObject().put("performed", performed).put("id", id)
             } finally {
@@ -2011,6 +2021,7 @@ class ScreenController(
      * When `id` is null we use the currently focused input.
      */
     fun submitInput(id: String?): JSONObject {
+        net.kuafuai.andee.cn.ActionGate.checkSubmit(livePackage() ?: lastPkg())
         if (id == null && A11yIme.sendsOnlyFromButton(service)) {
             throw IllegalStateException(
                 "this field has no keyboard send action — it sends only from its own Send/发送 " +
@@ -2941,6 +2952,7 @@ class ScreenController(
                     pkg = pkg,
                     viewId = row.node.optString("id").ifEmpty { null },
                     bounds = row.bounds,
+                    label = row.label,
                 )
             }
             val indent = "  ".repeat(minOf(row.depth, MAX_INDENT))
@@ -3108,6 +3120,77 @@ class ScreenController(
      */
     private fun childOf(node: AccessibilityNodeInfo, i: Int): AccessibilityNodeInfo? =
         if (android.os.Build.VERSION.SDK_INT >= 33) node.getChild(i, PREFETCH_WALK) else node.getChild(i)
+
+    // ---- action guard (GoWalkin fork) ------------------------------------------
+    //
+    // Every tap and long-press asks net.kuafuai.andee.cn.ActionGate first, with
+    // the label of whatever sits under the finger: a pay button is refused, an
+    // order needs the user's fresh yes, BOSS greetings are capped and paced.
+    // The label is read LIVE first, because the index can be one screen stale
+    // after a transition, and a stale label is either a false refusal or —
+    // worse — a missed one. The index is the fallback for a tree that answers
+    // nothing live. A tree-blind pane yields no label at all and is allowed:
+    // the guard cannot see what the app does not show it.
+
+    private fun guardAction(x: Int, y: Int) {
+        val pkg = livePackage() ?: lastPkg()
+        // Every labelled element under the finger, smallest first — not just the
+        // smallest: a tap on the price text inside a 确认呼叫 ¥23 button lands on
+        // "¥23", and only its parent says what the button does.
+        val labels = liveLabelsAt(x, y).ifEmpty { indexedLabelsAt(x, y) }
+        net.kuafuai.andee.cn.ActionGate.check(pkg, labels)
+    }
+
+    /**
+     * A swipe that barely moves is a tap — `swipe_by_coordinates` with the same
+     * start and end point was a way round [guardAction] — and a swipe that starts
+     * on a slide-to-confirm control (滑动确认 / 右滑支付) pays or orders like a tap
+     * on a button. Ordinary scrolling is checked against neither.
+     */
+    private fun guardSwipe(x1: Int, y1: Int, x2: Int, y2: Int) {
+        val tapLike = Math.hypot((x2 - x1).toDouble(), (y2 - y1).toDouble()) < SWIPE_TAP_SLOP_PX
+        val pkg = livePackage() ?: lastPkg()
+        val labels = liveLabelsAt(x1, y1).ifEmpty { indexedLabelsAt(x1, y1) }
+        net.kuafuai.andee.cn.ActionGate.checkSwipe(pkg, labels, tapLike)
+    }
+
+    private fun livePackage(): String? = runCatching {
+        val root = activeRoot() ?: return@runCatching null
+        try { root.packageName?.toString() } finally { root.recycle() }
+    }.getOrNull()
+
+    /** Text or description of every node whose bounds contain (x, y), smallest first. */
+    private fun liveLabelsAt(x: Int, y: Int): List<String> = runCatching {
+        val root = activeRoot() ?: return@runCatching emptyList()
+        val found = ArrayList<Pair<String, Long>>()
+        val r = android.graphics.Rect()
+        var budget = 2000
+        fun walk(n: AccessibilityNodeInfo) {
+            if (--budget < 0) return
+            n.getBoundsInScreen(r)
+            if (!r.contains(x, y)) return
+            val text = (n.text ?: n.contentDescription)?.toString()?.trim().orEmpty()
+            if (text.isNotEmpty()) found += text to r.width().toLong() * r.height().toLong()
+            for (i in 0 until n.childCount) {
+                val c = n.getChild(i) ?: continue
+                try { walk(c) } finally { c.recycle() }
+            }
+        }
+        try { walk(root) } finally { root.recycle() }
+        found.sortedBy { it.second }.map { it.first }
+    }.getOrDefault(emptyList())
+
+    private fun indexedLabelsAt(x: Int, y: Int): List<String> = synchronized(eidLock) {
+        eidIndex.values
+            .filter { it.label.isNotEmpty() && !it.label.startsWith("#") }
+            .mapNotNull { e ->
+                val p = e.bounds.split(",").mapNotNull { it.trim().toIntOrNull() }
+                if (p.size == 4 && x in p[0]..p[2] && y in p[1]..p[3]) e.label to (p[2] - p[0]).toLong() * (p[3] - p[1])
+                else null
+            }
+            .sortedBy { it.second }
+            .map { it.first }
+    }
 
     private fun activeRoot(): AccessibilityNodeInfo? =
         if (android.os.Build.VERSION.SDK_INT >= 33) service.getRootInActiveWindow(PREFETCH_WALK)
@@ -3639,6 +3722,9 @@ class ScreenController(
          * describes is the failure this is meant to stop.
          */
         private const val ZOOM_CONFIRM_MS = 60_000L
+
+        /** GoWalkin fork: a swipe shorter than this is treated as a tap by the action guard. */
+        private const val SWIPE_TAP_SLOP_PX = 24.0
 
         private const val POPUP_SETTLE_MS = 300L
 

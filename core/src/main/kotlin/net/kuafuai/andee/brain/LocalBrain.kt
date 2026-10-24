@@ -1384,7 +1384,7 @@ class LocalBrain(
         host.persona(),
         host.activeSceneName()?.let { host.scene(it) },
         host.platformPrompt(),
-    )
+    ) + host.extraPrompt().let { if (it.isBlank()) "" else "\n\n$it" }
 
     /**
      * The user swiped to a different character mid-conversation; make the model

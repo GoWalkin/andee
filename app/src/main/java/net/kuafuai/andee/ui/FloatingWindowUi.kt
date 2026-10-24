@@ -171,6 +171,9 @@ class FloatingWindowUi(
         /** The 朋友 key — the other Andees this one knows. See [PeersUi]. */
         fun onFriendsClick() {}
 
+        /** GoWalkin fork: the Translate key — "what does this screen say?" in one tap. */
+        fun onTranslateClick() {}
+
         /** The 情景 key — the scenes it has learned. See [ScenesUi]. */
         fun onScenesClick()
 
@@ -2673,6 +2676,12 @@ class FloatingWindowUi(
         keys.addView(barButton(R.drawable.ic_notebook, Glass.PHOTO_INK, "小本本") { listeners.onNotebookClick() })
         keys.addView(barButton(R.drawable.ic_scene, Glass.PHOTO_INK, "情景") { listeners.onScenesClick() })
         keys.addView(friendsKey())
+        // GoWalkin fork: one tap for the question someone who cannot read Chinese
+        // asks most. Only for them — a Chinese reader's bar is unchanged. Read
+        // when the bar is built, so flipping the setting shows on the next build.
+        if (VoiceConfig.readerNeedsBridge(context)) {
+            keys.addView(barButton(R.drawable.ic_translate, Glass.PHOTO_INK, "翻译") { listeners.onTranslateClick() })
+        }
         // ✓ and not ■: the stop button used to sit here, and stop is the one
         // action in this bar the ball can already perform — see onStopClick.
         keys.addView(barButton(R.drawable.ic_check, Glass.PHOTO_INK, "自检") { listeners.onSelfCheckClick() })

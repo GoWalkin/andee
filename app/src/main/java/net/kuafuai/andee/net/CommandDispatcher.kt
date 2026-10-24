@@ -158,6 +158,13 @@ class CommandDispatcher(
 ) {
     private val ui = Handler(Looper.getMainLooper())
 
+    init {
+        // GoWalkin fork: the action guard reads the user's autonomy setting and
+        // keeps its daily counters in prefs, so it needs a Context before the
+        // first tap. Idempotent; the dispatcher is built once per service.
+        net.kuafuai.andee.cn.ActionGate.init(appContext)
+    }
+
     /**
      * Put the two guards on a freshly built screen controller.
      *
@@ -797,6 +804,14 @@ class CommandDispatcher(
                 sayAloud(question, true)
                 latch.await(timeoutMs + 3000, java.util.concurrent.TimeUnit.MILLISECONDS)
                 val r = answer ?: net.kuafuai.andee.ui.CardUi.Result(null, "no_answer")
+                // GoWalkin fork: the first button is the yes by convention (the
+                // default pair is [yes, no], and the guard's refusals tell the
+                // model to put its yes first). A pick of it is the one thing that
+                // lets the next order or guarded send through — once, for two
+                // minutes. A voice answer naming no button is not a yes here.
+                if (r.button != null && r.button == buttons.firstOrNull()) {
+                    net.kuafuai.andee.cn.ActionGate.noteApproval(question)
+                }
                 // A timeout or a superseded card is no answer, and writing one
                 // would put words in the user's mouth.
                 (r.button ?: r.heard)?.takeIf { it.isNotBlank() }?.let {
@@ -1658,6 +1673,17 @@ class CommandDispatcher(
             // throws with the same "unknown method" line the else used to
             // produce, so a body with no peripherals reads exactly the same
             // as before this fallback existed.
+            // GoWalkin fork: the user's own documents (a CV), through the system
+            // picker — see net.kuafuai.andee.cn.DocumentImport. The picker is an
+            // activity, and our overlay sits above every activity, so fold first
+            // for the same reason device.scan does.
+            net.kuafuai.andee.cn.CnTools.PICK -> {
+                ensureCompact()
+                net.kuafuai.andee.cn.DocumentImport.pick(appContext, params?.optString("folder")?.ifBlank { null })
+            }
+            net.kuafuai.andee.cn.CnTools.READ ->
+                net.kuafuai.andee.cn.DocumentImport.read(appContext, params?.optInt("start_page", 1) ?: 1)
+
             else -> forwardExternal(method, params)
         }
     }
@@ -2093,6 +2119,7 @@ class CommandDispatcher(
          * answer gets out at all. Only the names that would fail are here.
          */
         val LOCKED_BLOCKED = setOf(
+            net.kuafuai.andee.cn.CnTools.PICK,
             "device.launch",
             "device.open_url",
             "device.scan",

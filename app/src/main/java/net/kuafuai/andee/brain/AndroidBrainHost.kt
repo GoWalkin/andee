@@ -56,6 +56,12 @@ class AndroidBrainHost(
 
     override fun persona(): String = BallLooks.byName(VoiceConfig.ballLook(ctx)).persona
 
+    // GoWalkin fork: §14 (the "does not read Chinese" bridge) and §15 (autonomy).
+    override fun extraPrompt(): String = net.kuafuai.andee.cn.BridgePrompt.render(
+        bridge = VoiceConfig.readerNeedsBridge(ctx),
+        autonomy = net.kuafuai.andee.cn.ActionGuard.Autonomy.parse(VoiceConfig.autonomy(ctx)),
+    )
+
     override fun touchActivity() = Notebook.touchActivity(ctx)
 
     override fun notebookIndex(): String = Notebook.indexForPrompt(ctx)
@@ -92,6 +98,8 @@ class AndroidBrainHost(
 
     override fun toolLists(): List<JSONArray> = listOfNotNull(
         ToolSchemas.all(), registry.tools(), market.tools(),
+        // GoWalkin fork: pick_document / read_document, kept out of ToolSchemas (golden-pinned).
+        net.kuafuai.andee.cn.CnTools.TOOLS,
         // A tool that can only ever answer "nothing is paired" is a promise made to every user who never set this up.
         net.kuafuai.andee.peer.PeerTasks.TOOLS.takeIf { peers.store.all().isNotEmpty() },
     )
@@ -101,6 +109,7 @@ class AndroidBrainHost(
             ?: toolName.takeIf { registry.hasMethod(it) }
             ?: toolName.takeIf { market.hasMethod(it) }
             ?: net.kuafuai.andee.peer.PeerTasks.methodOf(toolName)
+            ?: net.kuafuai.andee.cn.CnTools.methodOf(toolName)
 
     override fun dispatch(method: String, params: JSONObject, silent: Boolean, untrusted: Boolean): Any? {
         // Not the dispatcher's: the link to the other devices is not part of this body, and the hub must never

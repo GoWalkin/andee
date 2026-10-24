@@ -57,7 +57,17 @@ object ScenePresets {
         val example: String,
     )
 
-    class Preset(val name: String, private val zh: Text, private val en: Text) {
+    class Preset(
+        val name: String,
+        private val zh: Text,
+        private val en: Text,
+        /**
+         * Packages whose opening auto-enters the scene (GoWalkin fork; upstream
+         * presets have none). Only ever swaps the prompt — see
+         * `BodyCoreService.maybeAutoEnterScene` — and is skipped while a task runs.
+         */
+        val triggerApps: List<String> = emptyList(),
+    ) {
         fun text(english: Boolean): Text = if (english) en else zh
     }
 
@@ -68,7 +78,7 @@ object ScenePresets {
     fun notAdopted(context: Context): List<Preset> =
         all.filter { Notebook.scene(context, it.name) == null }
 
-    /** Write [preset] into the notebook in the chosen language. No trigger apps. */
+    /** Write [preset] into the notebook in the chosen language, with its trigger apps if it has any. */
     fun adopt(context: Context, preset: Preset, english: Boolean) {
         val t = preset.text(english)
         Notebook.saveScene(
@@ -77,7 +87,7 @@ object ScenePresets {
             title = t.title,
             summary = t.summary,
             prompt = t.prompt,
-            triggerApps = emptyList(),
+            triggerApps = preset.triggerApps,
         )
     }
 
@@ -326,5 +336,11 @@ object ScenePresets {
     )
 
     /** In the order the card offers them. */
-    val all: List<Preset> = listOf(CHAT_DUTY, SUBSCRIPTION_AUDIT, MEETING_NOTES, TIMED_BOOKING)
+    val all: List<Preset> by lazy {
+        // GoWalkin fork: the job hunt and the ride come first — they are what
+        // this build is for. Lazy because ChinaPresets refers back to this
+        // object's nested classes.
+        net.kuafuai.andee.cn.ChinaPresets.all +
+            listOf(CHAT_DUTY, SUBSCRIPTION_AUDIT, MEETING_NOTES, TIMED_BOOKING)
+    }
 }
