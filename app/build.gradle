@@ -181,6 +181,12 @@ dependencies {
 
     implementation project(':core')
 
+    // GoWalkin fork: offline speech recognition for the "Phone" voice (no key,
+    // no network, no Google services). The English model is not in git: CI
+    // downloads it into src/main/assets/vosk-model-en before building.
+    implementation 'net.java.dev.jna:jna:5.13.0@aar'
+    implementation 'com.alphacephei:vosk-android:0.3.47@aar'
+
     testImplementation libs.junit
     // Unit tests run against android.jar's stubs, whose org.json throws
     // "not mocked" on construction. BrainTrace builds a JSONObject before it

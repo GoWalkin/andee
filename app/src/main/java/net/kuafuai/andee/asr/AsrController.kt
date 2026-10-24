@@ -217,6 +217,8 @@ class AsrController(
         // can only ever mean "keep doing what this device already did".
         val client: AsrEngine = when (cfg.voiceProvider) {
             VoiceConfig.VOICE_GOOGLE -> GoogleAsr(cfg, listener)
+            // GoWalkin fork: offline, on the phone — see cn/PhoneAsr.
+            VoiceConfig.VOICE_PHONE -> net.kuafuai.andee.cn.PhoneAsr(context, listener)
             else -> HuoshanAsr(cfg, listener)
         }
         turnSilenceMs = client.silenceMs

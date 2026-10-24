@@ -418,12 +418,28 @@ class VaultUi(
             if (password) setMasked(true)
             setText(value)
         }
-        if (password) {
-            val row = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
+        // GoWalkin fork: every vault field gets a Paste key (long-press paste does
+        // not exist on an overlay card — see PasteKey); passwords keep Show too.
+        run {
+            val row = LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
             row.addView(
                 et,
                 LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f),
             )
+            row.addView(PasteKey.button(context, lctx, et, dp(12), dp(10)))
+            if (!password) {
+                parent.addView(
+                    row,
+                    LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                    ),
+                )
+                return@run
+            }
             var shown = false
             row.addView(TextView(context).apply {
                 text = lctx.getString(R.string.common_show)
@@ -445,14 +461,6 @@ class VaultUi(
             })
             parent.addView(
                 row,
-                LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                ),
-            )
-        } else {
-            parent.addView(
-                et,
                 LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT,

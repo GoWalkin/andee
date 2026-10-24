@@ -75,6 +75,7 @@ object VoiceConfig {
          */
         const val VOICE_HUOSHAN = VoiceSettings.VOICE_HUOSHAN
         const val VOICE_GOOGLE = VoiceSettings.VOICE_GOOGLE
+        const val VOICE_PHONE = VoiceSettings.VOICE_PHONE
 
         /**
          * The Vertex endpoint, its Express-keyed surface.
@@ -538,6 +539,7 @@ object VoiceConfig {
             return when (saved) {
                 VOICE_GOOGLE -> VOICE_GOOGLE
                 VOICE_HUOSHAN -> VOICE_HUOSHAN
+                VOICE_PHONE -> VOICE_PHONE
                 // Never chosen. A build packaged with a Google key is a build
                 // packaged *for* Google, so that is what it reads as; a build
                 // without one reads as 火山, which is what every build did

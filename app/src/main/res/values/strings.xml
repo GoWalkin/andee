@@ -161,6 +161,8 @@
     <string name="settings_voice_provider">语音服务商</string>
     <string name="settings_voice_provider_huoshan">火山</string>
     <string name="settings_voice_provider_google">谷歌</string>
+    <string name="settings_voice_provider_phone">手机自带</string>
+    <string name="settings_voice_phone_note">免费，不需要密钥，也不联网：用手机自己的语音合成朗读，用内置的离线模型听（目前只听英文）。音质和准确度不如云端，但在没有谷歌服务的华为/荣耀手机上也能用。</string>
     <string name="settings_google_api_key">Google API Key</string>
     <string name="settings_google_api_key_hint">Vertex Express Key,听和说都用它</string>
     <string name="settings_google_key_builtin">已内置(编译时写入),留空即用它</string>
@@ -214,6 +216,8 @@
     <string name="settings_typing_current">你现在的输入法</string>
     <string name="settings_typing_note">平时就是你自己的输入法 —— 任何 App 里都能正常打字。我替你打字时会临时切到 ADBKeyboard（它没有键盘界面，只能这么用），打完立刻切回来。</string>
     <string name="common_show">显示</string>
+    <string name="common_paste">粘贴</string>
+    <string name="common_clipboard_empty">剪贴板是空的</string>
     <string name="common_hide">隐藏</string>
 
     <!-- The pinned gesture tips at the bottom of the full card. The swipe hint
@@ -690,6 +694,10 @@
     <string name="check_detail_mic_off">没允许。点球不会有任何反应 —— 这是最不像权限问题的一条。</string>
     <string name="check_detail_voice_key_ok">已填。识别和合成用它连服务商。</string>
     <string name="check_detail_voice_key_missing">还没填。源码里不带密钥，得你自己去开一个语音服务,把 Key 填进 ⚙ →「后端」→「本机」。没有它，听和说都连不上 —— 报出来的却是连接超时，看着像网络坏了。其余功能照常。</string>
+    <string name="check_detail_phone_tts_ok">手机自带语音合成可用，不需要密钥。</string>
+    <string name="check_detail_phone_tts_missing">这台手机没有语音合成引擎。到 设置 → 辅助功能 → 文字转语音 安装或启用一个。</string>
+    <string name="check_detail_phone_model_ok">离线语音识别模型已在 App 里，不需要联网。</string>
+    <string name="check_detail_phone_model_missing">这个安装包没有离线识别模型（只有 CI 构建的包才带）。可以先打字。</string>
     <string name="check_detail_voice_host_ok">%1$s 可达。</string>
     <string name="check_detail_voice_host_bad">连不上 %1$s：%2$s。识别和合成都会超时。</string>
     <string name="check_detail_wake_on">已录入，喊一声就醒。</string>

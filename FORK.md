@@ -17,6 +17,7 @@ uses Chinese apps, and cannot read Chinese.
 | **Reading a CV**: `pick_document` opens the system picker (the brain can navigate it to the file the user named), `read_document` returns text for .docx/.txt, rendered pages for PDF, or the image | `core/.../cn/CnTools.kt`, `core/.../cn/DocxText.kt`, `app/.../cn/DocumentImport.kt`, `app/.../cn/DocumentPickActivity.kt` |
 | **App aliases**: `launch_app` accepts English and pinyin names (DiDi, Gaode, Boss, Meituan…), and notification rows name apps in English on an English interface | `core/.../cn/AppAliases.kt`, fallback in `DeviceActionsController.resolveLabel`, `NotificationRelayService.appLabel` |
 | **English voice**: with the bridge on, answers are read by an English Volcengine voice (default `en_female_dacey_uranus_bigtts`, changeable in settings), and the Chinese glosses are shown but not read aloud | `VoiceConfig.lookSpeaker`, `core/.../cn/SpokenEnglish.kt`, `TtsController.speakImpl` |
+| **Phone voice (free)**: a third voice provider with no key and no network: the phone's own TextToSpeech (WAV → resampled PCM into the existing player) and offline Vosk recognition (English model downloaded by CI into assets). Works on Huawei / Honor without Google services | `app/.../cn/PhoneVoice.kt`, `PhoneTts.kt`, `PhoneAsr.kt`, `core/.../cn/WavPcm.kt`, provider branches in `AsrController` / `TtsController` / `MeetingRecorder`, `SettingsUi`, `SelfCheck` |
 | **Translate key**: a one-tap "translate this screen" button on the ball's bar, shown only with the bridge on | `FloatingWindowUi` bar, `BodyCoreService.onTranslateClick`, `res/drawable/ic_translate.xml` |
 | **FreeLLMAPI and strict OpenAI gateways**: loopback HTTP allowed; `thinking` / `reasoning_effort` dropped automatically after a gateway refuses them; a self-check row tests that the model can read a screenshot and call a tool | `res/xml/network_security_config.xml`, `LlmClient.rejectsThinkingFields`, `core/.../cn/BrainSkills.kt`, `SelfCheck.brainSkills` |
 | **Recruiter replies aren't lost**: notifications from BOSS直聘 (and from the active scene's apps) that arrive while a task runs are queued and re-offered when it ends. BOSS is in the default chat tier | `NotificationRelayService` (`held`, `flushHeld`, `PUSH_PKGS`) |
@@ -33,7 +34,7 @@ hook lines, which keeps upstream merges small.
 
 `.github/workflows/build.yml`, `CHANGELOG.md`, `CLAUDE.md`, `README.md`, `app/build.gradle`,
 `app/src/debug/res/xml/network_security_config.xml`, `app/.../tts/TtsController.kt`, `app/.../ui/FloatingWindowUi.kt`,
-`app/.../BodyCoreService.kt`,
+`app/.../BodyCoreService.kt`, `app/.../asr/AsrController.kt`, `app/.../meeting/MeetingRecorder.kt`, `core/.../config/VoiceSettings.kt`, `app/proguard-rules.pro`, `.gitignore`,
 `app/src/main/AndroidManifest.xml`, `app/src/main/res/values/strings.xml`,
 `app/src/main/res/values-en/strings.xml`, `app/src/main/res/xml/network_security_config.xml`,
 `app/.../brain/AndroidBrainHost.kt`, `app/.../config/ScenePresets.kt`, `app/.../config/VoiceConfig.kt`,

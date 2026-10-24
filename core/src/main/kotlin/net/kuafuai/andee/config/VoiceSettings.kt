@@ -52,5 +52,12 @@ data class VoiceSettings(
     companion object {
         const val VOICE_HUOSHAN = "huoshan"
         const val VOICE_GOOGLE = "google"
+
+        /**
+         * GoWalkin fork: the phone's own engines — Android TextToSpeech for
+         * speaking, offline Vosk for hearing. No key and no network, which is the
+         * point on a phone with no Google services (Huawei / Honor).
+         */
+        const val VOICE_PHONE = "phone"
     }
 }
