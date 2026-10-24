@@ -670,7 +670,7 @@ object ToolSchemas {
             method = "device.vault.fill",
             description = """
         Type one saved secret into the input that ALREADY HAS FOCUS. Tap the
-        box first (tap_element / tap_screen) — exactly like type_text, which
+        box first (tap_screen_element / tap_by_coordinates) — exactly like type_text, which
         this is a wrapper around.
 
         `field` picks which secret: password (default), card_number,
@@ -1808,7 +1808,7 @@ object ToolSchemas {
         - when the scene is over
         Do not repeat rules your system prompt already has. Max 3000 characters.
 
-        `trigger_apps`: package names (e.g. com.taobao.taobao) whose opening by the user enters this scene automatically. Only when the user asked for that. Use list_apps to get exact package names.
+        `trigger_apps`: package names (e.g. com.taobao.taobao) whose opening by the user enters this scene automatically. Only when the user asked for that. Use list_installed_apps to get exact package names.
     """.trimIndent(),
             required = listOf("name", "title", "summary", "prompt"),
             props = mapOf(

@@ -1624,7 +1624,7 @@ class CommandDispatcher(
                             put(
                                 "warning",
                                 "Not installed on this device: ${unknown.joinToString()}. " +
-                                    "Check the package names with list_apps.",
+                                    "Check the package names with list_installed_apps.",
                             )
                         }
                     }
