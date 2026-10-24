@@ -216,6 +216,8 @@
     <string name="settings_typing_current">你现在的输入法</string>
     <string name="settings_typing_note">平时就是你自己的输入法 —— 任何 App 里都能正常打字。我替你打字时会临时切到 ADBKeyboard（它没有键盘界面，只能这么用），打完立刻切回来。</string>
     <string name="common_show">显示</string>
+    <string name="common_paste">粘贴</string>
+    <string name="common_clipboard_empty">剪贴板是空的</string>
     <string name="common_hide">隐藏</string>
 
     <!-- The pinned gesture tips at the bottom of the full card. The swipe hint

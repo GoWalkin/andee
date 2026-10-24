@@ -1577,7 +1577,7 @@ class SettingsUi(
         }
         fields[key] = et
 
-        if (!secret) {
+        if (numeric) {
             parent.addView(et, rowParams(dp(5)))
             return
         }
@@ -1586,6 +1586,12 @@ class SettingsUi(
             gravity = Gravity.CENTER_VERTICAL
         }
         row.addView(et, LinearLayout.LayoutParams(0, WRAP, 1f))
+        // GoWalkin fork: long-press paste does not exist on an overlay card — see PasteKey.
+        row.addView(PasteKey.button(context, lctx, et, dp(14), dp(8)))
+        if (!secret) {
+            parent.addView(row, rowParams(dp(5)))
+            return
+        }
         var shown = false
         row.addView(TextView(context).apply {
             text = lctx.getString(R.string.common_show)

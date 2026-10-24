@@ -239,6 +239,8 @@
     <string name="settings_typing_current">Your keyboard</string>
     <string name="settings_typing_note">Normally it is your own keyboard, and you can type in any app. While I am typing something for you it switches to ADBKeyboard (which has no keyboard UI — that is the only way it works), and switches straight back.</string>
     <string name="common_show">Show</string>
+    <string name="common_paste">Paste</string>
+    <string name="common_clipboard_empty">Clipboard empty</string>
     <string name="common_hide">Hide</string>
 
     <!-- The pinned gesture tips at the bottom of the full card. The swipe hint

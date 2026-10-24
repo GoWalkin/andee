@@ -46,6 +46,7 @@ screenshot, and every action is a tool call.
 5. Keep it alive: install **Termux:Boot** to start it on boot, run `termux-wake-lock`, and turn off battery
    optimisation for Termux.
 6. In Andee: **⚙ → Backend → On-device**:
+   - Long-press paste doesn't work on Andee's own cards. Tap **Paste** beside a field instead.
    - **Base URL:** `http://127.0.0.1:3001/v1`
    - **API key:** FreeLLMAPI's key if it gives you one, otherwise any non-empty text. Andee won't start its
      brain with an empty key.
