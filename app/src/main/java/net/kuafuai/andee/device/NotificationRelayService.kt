@@ -429,7 +429,18 @@ class NotificationRelayService : NotificationListenerService() {
         }
     }
 
-    private fun appLabel(pkg: String): String = when (pkg) {
+    private fun appLabel(pkg: String): String {
+        // GoWalkin fork: an English interface gets English app names in the
+        // scrollback, the triage payload and the spoken line — "DiDi", not 滴滴
+        // or the package tail `psnger`.
+        if (net.kuafuai.andee.config.VoiceConfig.uiLanguage(this) == net.kuafuai.andee.config.VoiceConfig.LANG_EN) {
+            net.kuafuai.andee.cn.AppAliases.displayName(pkg)?.let { return it }
+            if (pkg == "com.android.mms" || pkg == "com.android.messaging") return "Messages"
+        }
+        return chineseLabel(pkg)
+    }
+
+    private fun chineseLabel(pkg: String): String = when (pkg) {
         "com.tencent.mm" -> "微信"
         "com.tencent.mobileqq" -> "QQ"
         "com.alibaba.android.rimet" -> "钉钉"

@@ -40,6 +40,13 @@ object VoiceConfig {
         const val TTS_SPEAKER = "zh_female_vv_uranus_bigtts"
 
         /**
+         * GoWalkin fork: the voice for someone who does not read Chinese. A 2.0
+         * ("uranus") voice like the looks' own, so the default `seed-tts-2.0`
+         * resource serves it. Alternative: `en_male_tim_uranus_bigtts`.
+         */
+        const val DEFAULT_EN_SPEAKER = "en_female_dacey_uranus_bigtts"
+
+        /**
          * Keys whose blank value means "go back to the compiled default"
          * rather than "the user didn't touch this row". See [save].
          */
@@ -711,6 +718,7 @@ object VoiceConfig {
                 "reader" to readerSetting(context),
                 "autonomy" to autonomy(context),
                 "greet_cap" to p.getString("greet_cap", "").orEmpty(),
+                "tts_voice_en" to p.getString("tts_voice_en", "").orEmpty(),
             )
         }
 
@@ -789,16 +797,18 @@ object VoiceConfig {
          * and then the interface language: an English interface is the strongest
          * signal there is that the screen's Chinese is not readable to them.
          */
-        fun readerNeedsBridge(context: Context): Boolean {
-            val saved = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-                .getString("reader", "").orEmpty().trim().lowercase()
+        fun readerNeedsBridge(context: Context): Boolean =
+            readerNeedsBridge(context.getSharedPreferences(PREFS, Context.MODE_PRIVATE))
+
+        private fun readerNeedsBridge(p: android.content.SharedPreferences): Boolean {
+            val saved = p.getString("reader", "").orEmpty().trim().lowercase()
             if (saved == READER_EN) return true
             if (saved == READER_ZH) return false
             when (BuildConfig.DEFAULT_READER_LANG.trim().lowercase()) {
                 READER_EN -> return true
                 READER_ZH -> return false
             }
-            return uiLanguage(context) == LANG_EN
+            return uiLanguageOf(p) == LANG_EN
         }
 
         fun readerSetting(context: Context): String =
@@ -827,9 +837,11 @@ object VoiceConfig {
                 ?.trim()?.toIntOrNull()?.coerceIn(1, 150)
                 ?: net.kuafuai.andee.cn.ActionGuard.DEFAULT_GREET_CAP
 
-        fun uiLanguage(context: Context): String {
-            val saved = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-                .getString("lang", "").orEmpty().trim().lowercase()
+        fun uiLanguage(context: Context): String =
+            uiLanguageOf(context.getSharedPreferences(PREFS, Context.MODE_PRIVATE))
+
+        private fun uiLanguageOf(p: android.content.SharedPreferences): String {
+            val saved = p.getString("lang", "").orEmpty().trim().lowercase()
             if (saved == LANG_EN) return LANG_EN
             if (saved == LANG_ZH) return LANG_ZH
             // The build's `DEFAULT_LANG` (local.properties) is the language of a
@@ -946,9 +958,18 @@ object VoiceConfig {
          */
         private fun lookSpeaker(
             p: android.content.SharedPreferences,
-        ): String = net.kuafuai.andee.ui.ball.BallLooks
-            .byName(p.getString("ball", "").orEmpty().trim()).voice
-            .ifEmpty { TTS_SPEAKER }
+        ): String {
+            // GoWalkin fork: every character's voice is a Chinese one, and an
+            // English answer read by it is hard to follow. Someone who does not
+            // read Chinese gets an English voice whatever the look; the look still
+            // carries its persona. Override in ⚙ → China assistant.
+            if (readerNeedsBridge(p)) {
+                return p.getString("tts_voice_en", "").orEmpty().trim().ifEmpty { DEFAULT_EN_SPEAKER }
+            }
+            return net.kuafuai.andee.ui.ball.BallLooks
+                .byName(p.getString("ball", "").orEmpty().trim()).voice
+                .ifEmpty { TTS_SPEAKER }
+        }
 
         // api_key used to be absent here, because it was compiled in and a saved
         // pref would have shadowed the constant with no way to see it from the
@@ -986,6 +1007,6 @@ object VoiceConfig {
             "sweep", "sweep_quiet_minutes", "sweep_daily_cap",
             "max_steps",
             // GoWalkin fork: reader language, autonomy level, BOSS daily cap.
-            "reader", "autonomy", "greet_cap",
+            "reader", "autonomy", "greet_cap", "tts_voice_en",
         )
 }

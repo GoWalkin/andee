@@ -335,6 +335,12 @@ class BodyCoreService : Service() {
                 if (::peers.isInitialized) net.kuafuai.andee.ui.PeersUi(this@BodyCoreService, peers).show()
             }
 
+            // GoWalkin fork: the Translate key sends the same turn as saying it. The
+            // first screen tool folds the card, so the app behind is what gets read.
+            override fun onTranslateClick() {
+                submitUserTurn(AppLocale.str(this@BodyCoreService, R.string.translate_turn), "translate")
+            }
+
             override fun onSceneExitClick() {
                 net.kuafuai.andee.config.VoiceConfig.setActiveScene(this@BodyCoreService, null)
             }

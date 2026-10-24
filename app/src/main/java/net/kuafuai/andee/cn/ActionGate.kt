@@ -43,15 +43,23 @@ object ActionGate {
     @Volatile private var appContext: Context? = null
     private val lock = Any()
     private var approvalAt = 0L
+    private var approvalQuestion = ""
     private val sends = ArrayDeque<Long>()
 
     fun init(context: Context) {
         appContext = context.applicationContext
     }
 
-    /** The user picked the affirmative (first) button of an `ask_user` card. */
-    fun noteApproval() {
-        synchronized(lock) { approvalAt = System.currentTimeMillis() }
+    /**
+     * The user picked the affirmative (first) button of an `ask_user` card that
+     * asked [question]. What the question said decides what the yes may unlock
+     * ([ActionGuard.approvalCovers]).
+     */
+    fun noteApproval(question: String) {
+        synchronized(lock) {
+            approvalAt = System.currentTimeMillis()
+            approvalQuestion = question
+        }
     }
 
     /**
@@ -62,6 +70,17 @@ object ActionGate {
     fun check(pkg: String?, labels: List<String>) {
         val (kind, label) = ActionGuard.classifyAny(pkg, labels) ?: return
         decide(kind, pkg, label)
+    }
+
+    /**
+     * A swipe. One shorter than a finger's slop is a tap by another name and gets
+     * the full tap check; a real swipe is checked only against slide-to-confirm
+     * controls, so scrolling a list never spends a greeting or trips an order.
+     */
+    fun checkSwipe(pkg: String?, labels: List<String>, tapLike: Boolean) {
+        if (tapLike) return check(pkg, labels)
+        val kind = ActionGuard.classifySlide(labels) ?: return
+        decide(kind, pkg, labels.firstOrNull())
     }
 
     /** `submit_input` in a guarded chat app is a send by another name. */
@@ -81,6 +100,7 @@ object ActionGate {
             while (sends.isNotEmpty() && now - sends.peekFirst()!! > 3_600_000L) sends.pollFirst()
             val state = ActionGuard.State(
                 approvalAt = approvalAt,
+                approvalQuestion = approvalQuestion,
                 greetsToday = prefs.getInt(greetKey, 0),
                 greetCap = VoiceConfig.greetCap(ctx),
                 nextGreetAt = prefs.getLong("next_greet_at", 0L),
@@ -93,7 +113,7 @@ object ActionGate {
                     throw IllegalStateException("Refused by the device ($kind): ${d.reason}")
                 }
                 is ActionGuard.Decision.Allow -> {
-                    if (d.consumesApproval) approvalAt = 0L
+                    if (d.consumesApproval) { approvalAt = 0L; approvalQuestion = "" }
                     if (d.countsGreet) {
                         val spacing = Random.nextLong(GREET_SPACING_MIN_MS, GREET_SPACING_MAX_MS)
                         val edit = prefs.edit()

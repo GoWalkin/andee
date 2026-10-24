@@ -810,7 +810,7 @@ class CommandDispatcher(
                 // lets the next order or guarded send through — once, for two
                 // minutes. A voice answer naming no button is not a yes here.
                 if (r.button != null && r.button == buttons.firstOrNull()) {
-                    net.kuafuai.andee.cn.ActionGate.noteApproval()
+                    net.kuafuai.andee.cn.ActionGate.noteApproval(question)
                 }
                 // A timeout or a superseded card is no answer, and writing one
                 // would put words in the user's mouth.

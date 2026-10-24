@@ -21,6 +21,16 @@ class AppAliasesTest {
     }
 
     @Test
+    fun englishDisplayNames() {
+        assertEquals("DiDi", AppAliases.displayName("com.sdu.didi.psnger"))
+        assertEquals("BOSS Zhipin", AppAliases.displayName("com.hpbr.bosszhipin"))
+        assertEquals("WeChat", AppAliases.displayName("com.tencent.mm"))
+        assertEquals(null, AppAliases.displayName("com.example.unknown"))
+        // The display name is also a name you can say.
+        assertEquals(listOf("com.hpbr.bosszhipin"), AppAliases.candidates("BOSS Zhipin"))
+    }
+
+    @Test
     fun unknownNamesGiveNothing() {
         assertTrue(AppAliases.candidates("Spotify").isEmpty())
         assertTrue(AppAliases.candidates("   ").isEmpty())

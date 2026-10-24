@@ -53,6 +53,10 @@ screenshot, and every action is a tool call.
 7. Open the checklist (✓). Both **Model** and **Model can see and use tools** must be green. If the second one is
    red, the model you pinned can't do the job: pick another.
 
+**If Termux keeps getting killed:** run FreeLLMAPI on a computer at home instead and use
+`http://<that computer's LAN IP>:3001/v1` as the Base URL. The **debug** APK allows plain HTTP to your own network;
+the signed release APK allows only `127.0.0.1`.
+
 **What to expect from free models:** each step sends a screenshot plus about 20k tokens of instructions, so free
 daily limits run out during a long job-search batch. When quality drops or calls fail, that's the cause. A paid
 vision key (Qwen-VL on DashScope, or Doubao on Volcano Ark) is the same three fields with a different URL.
@@ -64,6 +68,13 @@ tiers may keep or train on what they receive.
 
 Typing works without voice: double-tap the ball. For voice, put a **Volcengine (火山引擎) speech** key in
 **⚙ → Backend → Voice**. Volcengine is reachable in China; the Google option needs a VPN.
+
+With **Can I read Chinese? = No**, answers are read by an **English voice** (default
+`en_female_dacey_uranus_bigtts`; `en_male_tim_uranus_bigtts` is a male one). Change it in ⚙ → China assistant →
+English voice. Nothing checks the ID in advance: if Andee goes quiet after a change, the ID is probably wrong, so
+clear the field to return to the default. Volcengine's voice list is at
+<https://www.volcengine.com/docs/6561/1257544>. The Chinese in brackets is shown on screen but not
+read aloud.
 
 ## 5. Set it up for you
 
@@ -91,7 +102,7 @@ Typing works without voice: double-tap the ball. For voice, put a **Volcengine (
 | "Do this every day at 10am." | Sets a daily task that re-enters the scene |
 | "Get me a DiDi to Hongqiao Railway Station." | Finds 虹桥火车站, fills the order, then asks: *"DiDi Express, here → Hongqiao Railway Station (虹桥火车站), about ¥45, pickup ~4 min. Call it?"* Only your yes calls the car. Then it reads you the plate number |
 | "Get me a robotaxi." | Tries Pony.ai / Apollo Go via Amap or Alipay. Outside their zones, it says so and offers DiDi |
-| "Translate this screen." / "What does this say?" | Puts an English page on screen explaining every label and button |
+| "Translate this screen." / "What does this say?", or the **Translate key** (文A) on the ball's bar | Puts an English page on screen explaining every label and button |
 | "Show the driver I'm at the north gate." | A full-screen card in big Chinese with a small English line |
 
 ## 7. Checking that the guard works (worth doing once)
@@ -113,4 +124,17 @@ Logs, if you have a computer: `adb logcat -s Body:*` (look for lines starting `g
 - **Pony.ai's own PonyPilot app is iPhone-only;** on Android this build uses Amap, Alipay or WeChat to reach it.
   Coverage is limited to designated zones in Guangzhou, Beijing, Shenzhen and Shanghai.
 - **Payment pages often show as black** to Andee (Android's secure-screen flag). Paying is always your step anyway.
-- **There's no one-tap "translate" button yet.** Say or type it.
+- **The guard's button lists are a first draft.** Until they have been checked against the current BOSS and DiDi
+  screens, read Andee's confirmations.
+
+## 8. A signed release build (optional, recommended)
+
+The debug APK is debuggable: anyone with adb access to the phone can read the app's data. For daily use, build
+a signed release:
+
+1. On your computer, create a keystore once and keep it safe (losing it means reinstalling, which wipes Andee's data):
+   `keytool -genkeypair -v -keystore andee-release.jks -alias andee -keyalg RSA -keysize 2048 -validity 10000`
+2. In **GoWalkin/andee → Settings → Secrets and variables → Actions**, add `ANDEE_KEYSTORE_B64` (the output of
+   `base64 -w0 andee-release.jks`), `ANDEE_STORE_PASS`, `ANDEE_KEY_ALIAS` (`andee`) and `ANDEE_KEY_PASS`.
+3. The next build uploads **app-release-signed**. Install `app-arm64-v8a-release.apk`. It's a different signature
+   from the debug build, so uninstall the debug build first (this wipes its data).

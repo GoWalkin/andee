@@ -1332,6 +1332,13 @@ class SettingsUi(
             hint = net.kuafuai.andee.cn.ActionGuard.DEFAULT_GREET_CAP.toString(),
             numeric = true,
         )
+        field(
+            panel,
+            "tts_voice_en",
+            lctx.getString(R.string.settings_tts_voice_en),
+            hint = VoiceConfig.DEFAULT_EN_SPEAKER,
+        )
+        note(panel, lctx.getString(R.string.settings_tts_voice_en_note))
     }
 
     private fun notifySection(form: LinearLayout) {

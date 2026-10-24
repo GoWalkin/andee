@@ -58,8 +58,19 @@ jobs:
   # resource the lint check cannot parse, is invisible until someone tries to
   # ship. That is exactly how a failing `assembleRelease` sat in this repo.
   # Runs in parallel, so it costs a PR no wall-clock time.
+  #
+  # GoWalkin fork: when the repository has the four ANDEE_* secrets, the same
+  # job signs the release build and uploads it — smaller, faster and not
+  # debuggable, unlike the debug APK. Without them (forks, PRs from forks) it is
+  # the unsigned gate it always was. Secrets cannot appear in `if:`, so they are
+  # mapped into env first and the steps test env.
   release-gate:
     runs-on: ubuntu-latest
+    env:
+      ANDEE_KEYSTORE_B64: ${{ secrets.ANDEE_KEYSTORE_B64 }}
+      ANDEE_STORE_PASS: ${{ secrets.ANDEE_STORE_PASS }}
+      ANDEE_KEY_ALIAS: ${{ secrets.ANDEE_KEY_ALIAS }}
+      ANDEE_KEY_PASS: ${{ secrets.ANDEE_KEY_PASS }}
     steps:
       - uses: actions/checkout@v4
 
@@ -70,4 +81,17 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v3
 
+      - name: Decode the release keystore
+        if: env.ANDEE_KEYSTORE_B64 != ''
+        run: |
+          echo "$ANDEE_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/andee-release.jks"
+          echo "ANDEE_KEYSTORE_FILE=$RUNNER_TEMP/andee-release.jks" >> "$GITHUB_ENV"
+
       - run: ./gradlew --no-daemon :app:assembleRelease
+
+      - uses: actions/upload-artifact@v4
+        if: env.ANDEE_KEYSTORE_B64 != ''
+        with:
+          name: app-release-signed
+          path: app/build/outputs/apk/release/*.apk
+          if-no-files-found: error

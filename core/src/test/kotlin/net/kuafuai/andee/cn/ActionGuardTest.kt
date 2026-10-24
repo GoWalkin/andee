@@ -81,6 +81,44 @@ class ActionGuardTest {
     }
 
     @Test
+    fun longChinesePhrasesMatchByPrefix() {
+        // The likeliest real DiDi button; the first rule let it through.
+        assertEquals(Kind.ORDER, ActionGuard.classify(didi, "确认呼叫快车"))
+        assertEquals(Kind.ORDER, ActionGuard.classify(didi, "呼叫特惠快车"))
+        assertEquals(Kind.ORDER, ActionGuard.classify(didi, "立即呼叫快车"))
+        assertEquals(Kind.ORDER, ActionGuard.classify("com.autonavi.minimap", "呼叫Robotaxi"))
+        assertEquals(Kind.GREET, ActionGuard.classify(boss, "立即沟通吧"))
+        // Short phrases still need a boundary.
+        assertNull(ActionGuard.classify(alipay, "支付宝"))
+        assertNull(ActionGuard.classify(didi, "支付方式"))
+        assertNull(ActionGuard.classify(didi, "呼叫司机"))
+        assertNull(ActionGuard.classify(boss, "发送位置"))
+    }
+
+    @Test
+    fun slideToConfirmOnlyCountsForRealSwipes() {
+        assertEquals(Kind.PAY, ActionGuard.classifySlide(listOf("右滑支付")))
+        assertEquals(Kind.ORDER, ActionGuard.classifySlide(listOf("滑动确认下单")))
+        // A scroll that starts on a greeting button or a job title is not a slide.
+        assertNull(ActionGuard.classifySlide(listOf("立即沟通", "Android开发工程师")))
+        assertNull(ActionGuard.classifySlide(listOf("向右滑动查看更多")))
+    }
+
+    @Test
+    fun anApprovalOnlyCoversWhatItWasAbout() {
+        val vague = State(approvalAt = now - 1_000, approvalQuestion = "Shall I continue?")
+        val priced = State(approvalAt = now - 1_000, approvalQuestion = "DiDi Express to Hongqiao (虹桥火车站), about ¥45. Call it?")
+        val quoted = State(approvalAt = now - 1_000, approvalQuestion = "Send this? 「您好，我对这个职位很感兴趣」 (Hello, I'm interested)")
+        val r = ActionGuard.decide(Kind.ORDER, Autonomy.SEMI, vague, now)
+        assertTrue(r is Decision.Refuse && r.reason.contains("must state the price"))
+        assertEquals(Decision.Allow(consumesApproval = true), ActionGuard.decide(Kind.ORDER, Autonomy.SEMI, priced, now))
+        assertTrue(ActionGuard.decide(Kind.SEND, Autonomy.SEMI, vague, now) is Decision.Refuse)
+        assertEquals(Decision.Allow(consumesApproval = true), ActionGuard.decide(Kind.SEND, Autonomy.SEMI, quoted, now))
+        // "It's" is not a quotation.
+        assertTrue(ActionGuard.decide(Kind.SEND, Autonomy.SEMI, State(approvalAt = now, approvalQuestion = "It's ready, send?"), now) is Decision.Refuse)
+    }
+
+    @Test
     fun theButtonAroundThePriceIsWhatCounts() {
         // The finger is on "¥23.50"; its parent is the call button.
         assertEquals(Kind.ORDER to "确认呼叫 ¥23.50", ActionGuard.classifyAny(didi, listOf("¥23.50", "确认呼叫 ¥23.50")))
@@ -107,11 +145,11 @@ class ActionGuardTest {
             assertTrue(ActionGuard.decide(Kind.ORDER, a, State(), now) is Decision.Refuse)
             assertEquals(
                 Decision.Allow(consumesApproval = true),
-                ActionGuard.decide(Kind.ORDER, a, State(approvalAt = now - 5_000), now),
+                ActionGuard.decide(Kind.ORDER, a, State(approvalAt = now - 5_000, approvalQuestion = "Order it for ¥20?"), now),
             )
             // Expired.
             assertTrue(
-                ActionGuard.decide(Kind.ORDER, a, State(approvalAt = now - ActionGuard.APPROVAL_TTL_MS - 1), now)
+                ActionGuard.decide(Kind.ORDER, a, State(approvalAt = now - ActionGuard.APPROVAL_TTL_MS - 1, approvalQuestion = "¥20?"), now)
                     is Decision.Refuse,
             )
         }
@@ -143,7 +181,7 @@ class ActionGuardTest {
         assertTrue(ActionGuard.decide(Kind.SEND, Autonomy.SEMI, State(), now) is Decision.Refuse)
         assertEquals(
             Decision.Allow(consumesApproval = true),
-            ActionGuard.decide(Kind.SEND, Autonomy.SEMI, State(approvalAt = now - 1_000), now),
+            ActionGuard.decide(Kind.SEND, Autonomy.SEMI, State(approvalAt = now - 1_000, approvalQuestion = "发送「好的」?"), now),
         )
         assertEquals(Decision.Allow(countsSend = true), ActionGuard.decide(Kind.SEND, Autonomy.FULL, State(), now))
         assertTrue(

@@ -301,10 +301,16 @@ class TtsController(
         executor.shutdownNow()
     }
 
-    private fun speakImpl(text: String, cues: List<SpeechMood.Cue>) {
+    private fun speakImpl(rawText: String, rawCues: List<SpeechMood.Cue>) {
         val cfg = VoiceConfig.load(context)
         // Interrupted while this utterance sat in the executor queue.
         if (cancelled) return
+        // GoWalkin fork: an English voice does not read the Chinese glosses the
+        // bridge puts in brackets — they are for the eyes. Cues move with the text.
+        val (text, cues) = if (net.kuafuai.andee.cn.SpokenEnglish.isEnglishVoice(cfg.ttsSpeaker)) {
+            net.kuafuai.andee.cn.SpokenEnglish.strip(rawText, rawCues)
+        } else rawText to rawCues
+        if (text.isBlank()) return
 
         cueText = text
         cueList = cues

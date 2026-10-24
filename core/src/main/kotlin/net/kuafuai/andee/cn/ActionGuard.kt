@@ -65,6 +65,14 @@ object ActionGuard {
     data class State(
         /** When the user last picked the first (affirmative) button of an `ask_user` card, or 0. */
         val approvalAt: Long = 0L,
+        /**
+         * The question that yes answered. An approval only covers what it was
+         * about: an order needs a question that stated a price, a send one that
+         * showed the text — see [approvalCovers]. A yes to "shall I continue?"
+         * buys nothing, which is the point: a page that talks the model into
+         * asking something vague must not get an order out of it.
+         */
+        val approvalQuestion: String = "",
         /** Greetings sent today in the app being tapped. */
         val greetsToday: Int = 0,
         val greetCap: Int = DEFAULT_GREET_CAP,
@@ -133,8 +141,26 @@ object ActionGuard {
     fun classifyAny(pkg: String?, labels: List<String>): Pair<Kind, String>? =
         labels.mapNotNull { l -> classify(pkg, l)?.let { it to l } }.minByOrNull { it.first.ordinal }
 
+    /**
+     * Whether a yes to [question] is a yes to a tap of [kind]. ORDER: the question
+     * must state a price (a digit, ¥, 元, yuan, RMB). SEND: it must show the text,
+     * which in this fork is Chinese (a CJK character) or quoted. Other kinds take no
+     * approval.
+     */
+    fun approvalCovers(kind: Kind, question: String): Boolean = when (kind) {
+        Kind.ORDER -> PRICE.containsMatchIn(question)
+        Kind.SEND -> CJK.containsMatchIn(question) || QUOTE.containsMatchIn(question)
+        else -> false
+    }
+
     fun decide(kind: Kind, autonomy: Autonomy, state: State, now: Long): Decision {
-        val approved = state.approvalAt > 0 && now - state.approvalAt in 0..APPROVAL_TTL_MS
+        val fresh = state.approvalAt > 0 && now - state.approvalAt in 0..APPROVAL_TTL_MS
+        val approved = fresh && approvalCovers(kind, state.approvalQuestion)
+        // A yes that does not cover this tap gets a refusal that says why, so the
+        // model asks the right question instead of the same one again.
+        val vague = if (fresh && !approved) " Your last question did not say enough for this: " +
+            (if (kind == Kind.ORDER) "it must state the price." else "it must show the exact text being sent.")
+        else ""
         return when (kind) {
             Kind.PAY -> Decision.Refuse(
                 "This button pays money. Paying is always the user's own step, at every autonomy level: " +
@@ -148,7 +174,7 @@ object ActionGuard {
                     "This button places an order that costs money (a ride, a purchase, a booking). " +
                         "Ask the user first with ask_user: say what it is, from where to where or which item, " +
                         "and the price, and put the yes option FIRST in buttons. Tap again only after they " +
-                        "pick it; one yes covers one tap, for two minutes.",
+                        "pick it; one yes covers one tap, for two minutes." + vague,
                 )
 
             Kind.GREET -> when {
@@ -185,7 +211,7 @@ object ActionGuard {
                     else Decision.Refuse(
                         "Autonomy is Semi-auto: a message to someone else, or sharing contact details, needs the " +
                             "user's yes first. Ask with ask_user, showing the exact Chinese text and an English " +
-                            "translation, with the send option FIRST in buttons. Then tap again.",
+                            "translation, with the send option FIRST in buttons. Then tap again." + vague,
                     )
                 Autonomy.FULL ->
                     if (state.sendsThisHour >= FULL_SENDS_PER_HOUR) Decision.Refuse(
@@ -202,31 +228,67 @@ object ActionGuard {
         label.lowercase().replace(Regex("[\\s\\u00a0]+"), "")
 
     /**
-     * Exact, or the label starts with the phrase and what follows is decoration
-     * rather than another word — "立即支付¥23.50", "确认呼叫(快车)", "pay·¥20". The
-     * character right after the phrase decides: a letter (CJK or Latin) means the
-     * phrase was only the start of a different word, so 支付宝 is not 支付, 支付方式
-     * is not a pay button, and "payment methods" is not "pay". A phrase merely
-     * *contained* in a longer label never matches.
+     * Does [label] start with one of [phrases]? Two rules, by phrase length:
+     *
+     *  * **A Chinese phrase of four or more characters is a whole action**, so any
+     *    label starting with it matches: 确认呼叫 covers 确认呼叫快车 and
+     *    确认呼叫(快车), 立即沟通 covers 立即沟通吧. The first version required a
+     *    non-letter after every phrase and so let 确认呼叫快车 — the likeliest real
+     *    DiDi button — through unguarded.
+     *  * **A short phrase (≤ 3 characters) or any Latin one must end at a word
+     *    boundary**: what follows has to be decoration (a price, a bracket), not a
+     *    letter. That is what keeps 支付宝 from counting as 支付, 支付方式 from
+     *    being a pay button, and "payment methods" from being "pay".
+     *
+     * A phrase merely *contained* in a longer label never matches.
      */
     internal fun matches(label: String, phrases: List<String>): Boolean =
         phrases.any { ph ->
-            label == ph || (label.startsWith(ph) && !Character.isLetter(label[ph.length]))
+            when {
+                label == ph -> true
+                !label.startsWith(ph) -> false
+                ph.length >= 4 && CJK.containsMatchIn(ph) -> true
+                else -> !Character.isLetter(label[ph.length])
+            }
         }
+
+    /**
+     * For a real swipe (not a tap-length one): only a slide-to-confirm control
+     * counts, never whatever list row the swipe happened to start on — a scroll
+     * that began on a 立即沟通 button must not spend a greeting.
+     */
+    fun classifySlide(labels: List<String>): Kind? {
+        val norm = labels.map(::normalize)
+        return when {
+            norm.any { matches(it, SLIDE_PAY) } -> Kind.PAY
+            norm.any { matches(it, SLIDE_ORDER) } -> Kind.ORDER
+            else -> null
+        }
+    }
+
+    private val CJK = Regex("[\\u4e00-\\u9fff]")
+    private val PRICE = Regex("[0-9０-９¥￥元]|yuan|rmb|cny", RegexOption.IGNORE_CASE)
+    // Typographic and straight double quotes only: a bare apostrophe ("it's") is not a quotation.
+    private val QUOTE = Regex("[\"“”「」『』]")
+
+    private val SLIDE_PAY = listOf("滑动支付", "右滑支付", "向右滑动支付", "滑动付款", "右滑付款")
+    private val SLIDE_ORDER = listOf(
+        "滑动确认", "右滑确认", "向右滑动确认", "滑动下单", "右滑下单", "滑动叫车", "右滑叫车", "滑动呼叫",
+    )
 
     private val PAY = listOf(
         "立即支付", "确认支付", "确认付款", "去支付", "立即付款", "去付款", "支付", "付款",
         "确认交易", "免密支付", "确认转账", "立即转账", "去结算并支付",
         "paynow", "confirmpayment", "pay",
-    )
+    ) + SLIDE_PAY
 
     /** Order phrases strong enough to mean "order" in any app. */
     private val ORDER_ANY = listOf(
         "确认呼叫", "呼叫快车", "呼叫专车", "呼叫出租车", "立即叫车", "确认叫车", "一键叫车", "确认用车",
         "立即用车", "呼叫无人车", "呼叫自动驾驶", "确认下单", "提交订单", "立即下单", "去下单",
-        "立即购买", "确认购买", "立即预订", "确认预订", "提交预约",
+        "立即购买", "确认购买", "立即预订", "确认预订", "提交预约", "立即呼叫", "呼叫特惠", "呼叫robotaxi",
         "confirmride", "callacar", "requestride", "placeorder", "submitorder", "booknow",
-    )
+    ) + SLIDE_ORDER
 
     /** Short words that mean "order a car" only inside a ride app. */
     private val ORDER_RIDE = listOf("呼叫", "叫车", "立即预约", "确认预约", "预约用车", "call")

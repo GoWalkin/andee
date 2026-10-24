@@ -1572,6 +1572,9 @@ class ScreenController(
             val matches = root.findAccessibilityNodeInfosByViewId(id).orEmpty()
             val target = matches.firstOrNull() ?: throw IllegalArgumentException("no node with id: $id")
             try {
+                // GoWalkin fork: a click by id is a tap without a gesture — same guard.
+                val r = Rect().also { target.getBoundsInScreen(it) }
+                guardAction(r.centerX(), r.centerY())
                 val performed = target.performAction(AccessibilityNodeInfo.ACTION_CLICK)
                 return JSONObject().put("performed", performed).put("id", id).put("matches", matches.size)
             } finally {
@@ -1592,6 +1595,7 @@ class ScreenController(
      * the stroke shrinks the coast but never removes it.
      */
     fun swipe(x1: Int, y1: Int, x2: Int, y2: Int, durationMs: Long, fling: Boolean): JSONObject {
+        guardSwipe(x1, y1, x2, y2)
         if (fling) guardFlingStreak(y2 > y1) else synchronized(loopLock) { flingStreak = 0 }
         val path = Path().apply {
             moveTo(x1.toFloat(), y1.toFloat())
@@ -1730,6 +1734,9 @@ class ScreenController(
             val matches = root.findAccessibilityNodeInfosByViewId(id).orEmpty()
             val target = matches.firstOrNull() ?: throw IllegalArgumentException("no node with id: $id")
             try {
+                // GoWalkin fork: a click by id is a tap without a gesture — same guard.
+                val r = Rect().also { target.getBoundsInScreen(it) }
+                guardAction(r.centerX(), r.centerY())
                 val performed = target.performAction(AccessibilityNodeInfo.ACTION_LONG_CLICK)
                 return JSONObject().put("performed", performed).put("id", id)
             } finally {
@@ -3134,6 +3141,19 @@ class ScreenController(
         net.kuafuai.andee.cn.ActionGate.check(pkg, labels)
     }
 
+    /**
+     * A swipe that barely moves is a tap — `swipe_by_coordinates` with the same
+     * start and end point was a way round [guardAction] — and a swipe that starts
+     * on a slide-to-confirm control (滑动确认 / 右滑支付) pays or orders like a tap
+     * on a button. Ordinary scrolling is checked against neither.
+     */
+    private fun guardSwipe(x1: Int, y1: Int, x2: Int, y2: Int) {
+        val tapLike = Math.hypot((x2 - x1).toDouble(), (y2 - y1).toDouble()) < SWIPE_TAP_SLOP_PX
+        val pkg = livePackage() ?: lastPkg()
+        val labels = liveLabelsAt(x1, y1).ifEmpty { indexedLabelsAt(x1, y1) }
+        net.kuafuai.andee.cn.ActionGate.checkSwipe(pkg, labels, tapLike)
+    }
+
     private fun livePackage(): String? = runCatching {
         val root = activeRoot() ?: return@runCatching null
         try { root.packageName?.toString() } finally { root.recycle() }
@@ -3702,6 +3722,9 @@ class ScreenController(
          * describes is the failure this is meant to stop.
          */
         private const val ZOOM_CONFIRM_MS = 60_000L
+
+        /** GoWalkin fork: a swipe shorter than this is treated as a tap by the action guard. */
+        private const val SWIPE_TAP_SLOP_PX = 24.0
 
         private const val POPUP_SETTLE_MS = 300L
 

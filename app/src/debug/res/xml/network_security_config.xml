@@ -18,6 +18,14 @@
     漏一个主机，debug 上就会少一个能连的地址，而 release 上一切正常。
 -->
 <network-security-config>
+    <!-- GoWalkin fork, debug only: plain HTTP to any host the user typed in ⚙ —
+         so an LLM router (FreeLLMAPI) on a home PC, http://192.168.x.x:3001/v1,
+         works when running it on the phone in Termux does not. The network
+         security config cannot name an IP range, so it is all-or-named; every
+         http:// URL this app calls is one the user entered. Release stays strict
+         (loopback and the one named host only). -->
+    <base-config cleartextTrafficPermitted="true" />
+
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="true">124.71.176.202</domain>
     </domain-config>
