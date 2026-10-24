@@ -49,6 +49,8 @@ hash into `versionName` at build time would close this hole; it is not implement
   order if its question stated the price, and a send if it showed the text.
 - English voice for the bridge (`tts_voice_en`, default `en_female_dacey_uranus_bigtts`); Chinese glosses are not
   read aloud by it. English app names in notification rows.
+- "Phone (free)" voice provider: the phone's own text-to-speech plus offline Vosk English recognition. No key,
+  no network, works without Google services; CI bundles the model.
 - One-tap Translate key on the ball's bar (bridge mode only).
 - Debug build allows plain HTTP to any host (FreeLLMAPI on a home PC); CI signs the release build when the
   `ANDEE_*` secrets are present.

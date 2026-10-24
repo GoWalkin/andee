@@ -32,6 +32,15 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v3
 
+      # GoWalkin fork: the offline speech model for the "Phone" voice (~40 MB),
+      # fetched at build time rather than kept in git.
+      - name: Fetch the offline speech model
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/model.zip" https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip
+          unzip -q "$RUNNER_TEMP/model.zip" -d "$RUNNER_TEMP/model"
+          mkdir -p app/src/main/assets
+          mv "$RUNNER_TEMP/model/vosk-model-small-en-us-0.15" app/src/main/assets/vosk-model-en
+
       - run: ./gradlew --no-daemon :app:assembleDebug
 
       # The real unit tests live in core/ (brain guards, friends, the GoWalkin
@@ -80,6 +89,15 @@ jobs:
           java-version: '17'
 
       - uses: gradle/actions/setup-gradle@v3
+
+      # GoWalkin fork: the offline speech model for the "Phone" voice (~40 MB),
+      # fetched at build time rather than kept in git.
+      - name: Fetch the offline speech model
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/model.zip" https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip
+          unzip -q "$RUNNER_TEMP/model.zip" -d "$RUNNER_TEMP/model"
+          mkdir -p app/src/main/assets
+          mv "$RUNNER_TEMP/model/vosk-model-small-en-us-0.15" app/src/main/assets/vosk-model-en
 
       - name: Decode the release keystore
         if: env.ANDEE_KEYSTORE_B64 != ''

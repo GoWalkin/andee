@@ -19,3 +19,9 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+# GoWalkin fork: Vosk reaches its native library through JNA, which looks
+# classes and fields up by name at runtime.
+-keep class com.sun.jna.** { *; }
+-keep class * implements com.sun.jna.** { *; }
+-keep class org.vosk.** { *; }
+-dontwarn java.awt.**

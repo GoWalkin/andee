@@ -722,6 +722,8 @@ class SettingsUi(
                 // [VoiceConfig.voiceProvider].
                 VoiceConfig.VOICE_HUOSHAN to lctx.getString(R.string.settings_voice_provider_huoshan),
                 VoiceConfig.VOICE_GOOGLE to lctx.getString(R.string.settings_voice_provider_google),
+                // GoWalkin fork: no key, no network — the phone's own engines.
+                VoiceConfig.VOICE_PHONE to lctx.getString(R.string.settings_voice_provider_phone),
             ),
         ) { applyProvider?.invoke(it, true) }
 
@@ -814,9 +816,14 @@ class SettingsUi(
         )
         note(googleBlock, lctx.getString(R.string.settings_voice_google_note))
 
+        // GoWalkin fork: the phone voice has nothing to configure, only something to know.
+        val phoneBlock = block(voiceBlock)
+        note(phoneBlock, lctx.getString(R.string.settings_voice_phone_note))
+
         applyProvider = { p, animate ->
             Glass.setVisible(huoshanBlock, p == VoiceConfig.VOICE_HUOSHAN, animate)
             Glass.setVisible(googleBlock, p == VoiceConfig.VOICE_GOOGLE, animate)
+            Glass.setVisible(phoneBlock, p == VoiceConfig.VOICE_PHONE, animate)
         }
         applyProvider(provider, false)
 

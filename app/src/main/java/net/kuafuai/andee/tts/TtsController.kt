@@ -422,6 +422,8 @@ class TtsController(
         // Which service speaks. Same fail-to-火山 rule as the listening side.
         val c: TtsEngine = when (cfg.voiceProvider) {
             VoiceConfig.VOICE_GOOGLE -> GoogleTts(cfg, listener)
+            // GoWalkin fork: the phone's own text-to-speech — see cn/PhoneTts.
+            VoiceConfig.VOICE_PHONE -> net.kuafuai.andee.cn.PhoneTts(context, listener)
             else -> HuoshanTts(cfg, listener)
         }
         client = c

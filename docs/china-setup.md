@@ -57,6 +57,12 @@ screenshot, and every action is a tool call.
 `http://<that computer's LAN IP>:3001/v1` as the Base URL. The **debug** APK allows plain HTTP to your own network;
 the signed release APK allows only `127.0.0.1`.
 
+**Using OpenRouter's free models instead:** base URL `https://openrouter.ai/api/v1`, your OpenRouter key, and a
+model ID ending in `:free` that supports **both images and tools** (check the model's page). Then confirm the
+"Model can see and use tools" row is green. Limits: free models are capped at **50 requests a day** (1,000 a day
+once you have bought $10 of credit, even if you never spend it) and 20 a minute. One task takes roughly 10–25
+requests, so the free cap is about 2–5 tasks a day. OpenRouter usually needs a VPN from mainland China.
+
 **What to expect from free models:** each step sends a screenshot plus about 20k tokens of instructions, so free
 daily limits run out during a long job-search batch. When quality drops or calls fail, that's the cause. A paid
 vision key (Qwen-VL on DashScope, or Doubao on Volcano Ark) is the same three fields with a different URL.
@@ -66,15 +72,23 @@ tiers may keep or train on what they receive.
 
 ## 4. Voice (optional)
 
-Typing works without voice: double-tap the ball. For voice, put a **Volcengine (火山引擎) speech** key in
-**⚙ → Backend → Voice**. Volcengine is reachable in China; the Google option needs a VPN.
+Typing always works: double-tap the ball. For voice there are three options in **⚙ → Backend → Voice provider**:
 
-With **Can I read Chinese? = No**, answers are read by an **English voice** (default
-`en_female_dacey_uranus_bigtts`; `en_male_tim_uranus_bigtts` is a male one). Change it in ⚙ → China assistant →
-English voice. Nothing checks the ID in advance: if Andee goes quiet after a change, the ID is probably wrong, so
-clear the field to return to the default. Volcengine's voice list is at
-<https://www.volcengine.com/docs/6561/1257544>. The Chinese in brackets is shown on screen but not
-read aloud.
+| Option | Cost | Works in China without a VPN | Notes |
+|---|---|---|---|
+| **Phone (free)** | Free, no key | Yes, fully offline | The phone's own text-to-speech speaks, and an offline English model built into the app listens. The only choice on Huawei / Honor phones without paying. Less natural, and it only understands **English** for now. |
+| Volcengine (火山) | Paid per use, cheap | Yes | Best quality, understands Chinese and English. Needs a Volcengine account and a speech key. |
+| Google | Google Cloud (Vertex) key | No | Needs a VPN. |
+
+**Phone voice setup:** pick **Phone (free)** and save. In the checklist (✓), both voice rows should be green. If the
+text-to-speech row is red, enable an engine in Settings → Accessibility → Text-to-speech. Huawei/Honor have their own;
+make sure its English voice data is downloaded. The model row needs a **CI build**: a local build without the model
+says so and keeps typing working.
+
+With **Can I read Chinese? = No** and a Volcengine key, answers are read by an English Volcengine voice (default
+`en_female_dacey_uranus_bigtts`), changeable in ⚙ → China assistant → English voice. Nothing checks the ID in advance:
+if Andee goes quiet after a change, clear the field to return to the default. The Chinese in brackets is shown on
+screen but not read aloud, with every voice option.
 
 ## 5. Set it up for you
 

@@ -985,6 +985,17 @@ object SelfCheck {
      */
     private fun voiceKey(context: Context): Finding {
         val cfg = VoiceConfig.load(context)
+        // GoWalkin fork: the phone voice needs no key; say what it does need instead.
+        if (cfg.voiceProvider == VoiceConfig.VOICE_PHONE) {
+            val tts = net.kuafuai.andee.cn.PhoneVoice.hasTtsEngine(context)
+            return Finding(
+                id = "voice_key",
+                title = R.string.check_title_voice_key,
+                level = if (tts) Level.OK else Level.WARN,
+                detail = if (tts) R.string.check_detail_phone_tts_ok else R.string.check_detail_phone_tts_missing,
+                fix = if (tts) Fix.Nothing else Fix.Screen("com.android.settings.TTS_SETTINGS"),
+            )
+        }
         val has = if (cfg.voiceProvider == VoiceConfig.VOICE_GOOGLE) {
             cfg.googleApiKey.isNotBlank()
         } else {
@@ -1018,6 +1029,16 @@ object SelfCheck {
      * it, synthesis posts to it.
      */
     private fun voiceReach(context: Context, probe: Boolean, online: Boolean): Finding {
+        // GoWalkin fork: nothing to reach — the phone voice hears with a model in the APK.
+        if (VoiceConfig.voiceProvider(context) == VoiceConfig.VOICE_PHONE) {
+            val model = net.kuafuai.andee.cn.PhoneVoice.hasModel(context)
+            return Finding(
+                id = "voice_host",
+                title = R.string.check_title_voice_host,
+                level = if (model) Level.OK else Level.WARN,
+                detail = if (model) R.string.check_detail_phone_model_ok else R.string.check_detail_phone_model_missing,
+            )
+        }
         val host = if (VoiceConfig.voiceProvider(context) == VoiceConfig.VOICE_GOOGLE) {
             VOICE_HOST_GOOGLE
         } else {
