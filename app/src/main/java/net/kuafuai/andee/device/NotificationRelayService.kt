@@ -66,6 +66,18 @@ class NotificationRelayService : NotificationListenerService() {
     private val pending = HashMap<String, Runnable>()
 
     /**
+     * GoWalkin fork: notifications held back because a task was running, from
+     * an app the user is *working in* — the active scene's trigger apps, and
+     * BOSS直聘 always. Upstream drops these on the floor ("held" was only a log
+     * line), which is right for a stray chat and wrong for a recruiter replying
+     * while the job-hunt batch is still applying: the reply would never be
+     * read. Newest per package wins, at most [HELD_MAX], each good for
+     * [HELD_TTL_MS]; re-offered once the task ends. Main thread only.
+     */
+    private val held = LinkedHashMap<String, Pair<JSONObject, Long>>()
+    private val retryHeld = Runnable { flushHeld() }
+
+    /**
      * Bound *right now*, which is the only question worth asking — see
      * [ensureBound] for why the permission flag can't answer it.
      */
@@ -305,6 +317,15 @@ class NotificationRelayService : NotificationListenerService() {
     private fun deliver(n: JSONObject) {
         val svc = net.kuafuai.andee.BodyCoreService.get()
         if (svc?.dispatcherForNotification()?.isTaskActive() == true) {
+            if (worthHolding(n)) {
+                held.remove(n.optString("pkg"))
+                held[n.optString("pkg")] = n to System.currentTimeMillis()
+                while (held.size > HELD_MAX) held.remove(held.keys.first())
+                main.removeCallbacks(retryHeld)
+                main.postDelayed(retryHeld, HELD_RETRY_MS)
+                android.util.Log.i("Body", "notification queued until the task ends (${n.optString("app")})")
+                return
+            }
             // A task is running: the ball is busy gripping the ledge and the
             // brain is mid-job on this very screen. Interrupting it now — with a
             // signboard, or worse by starting a second turn — would yank the
@@ -330,6 +351,33 @@ class NotificationRelayService : NotificationListenerService() {
             val handled = runCatching { svc?.handleNotification(n) }.getOrNull() ?: false
             if (!handled) net.kuafuai.andee.ui.CardUi.post { showSignboardFor(n) }
         }.start()
+    }
+
+    private fun worthHolding(n: JSONObject): Boolean {
+        val pkg = n.optString("pkg")
+        if (pkg == net.kuafuai.andee.cn.ActionGuard.BOSS) return true
+        val scene = net.kuafuai.andee.config.VoiceConfig.activeScene(this) ?: return false
+        return net.kuafuai.andee.config.Notebook.scene(this, scene)?.triggerApps?.contains(pkg) == true
+    }
+
+    /** Re-offer what was held, once no task is running. Main thread. */
+    private fun flushHeld() {
+        if (held.isEmpty()) return
+        val svc = net.kuafuai.andee.BodyCoreService.get()
+        if (svc?.dispatcherForNotification()?.isTaskActive() == true) {
+            main.postDelayed(retryHeld, HELD_RETRY_MS)
+            return
+        }
+        val now = System.currentTimeMillis()
+        val due = held.values.filter { now - it.second <= HELD_TTL_MS }.map { it.first }
+        held.clear()
+        // One at a time: the first one delivered may start a task, and deliver()
+        // re-queues the rest if it does.
+        due.firstOrNull()?.let { deliver(it) }
+        due.drop(1).forEach { n ->
+            held[n.optString("pkg")] = n to now
+        }
+        if (held.isNotEmpty()) main.postDelayed(retryHeld, HELD_RETRY_MS)
     }
 
     private fun showSignboardFor(n: JSONObject) {
@@ -408,6 +456,8 @@ class NotificationRelayService : NotificationListenerService() {
         "com.ss.android.lark",       // 飞书
         "com.whatsapp",
         "com.immomo.momo", "com.sdu.didi.psnger",
+        // GoWalkin fork: recruiter replies — the job-hunt scene answers them.
+        "com.hpbr.bosszhipin",
         "com.android.mms", "com.android.messaging", // 短信(含验证码)
         "com.gmail", "com.sina.weibo",
     )
@@ -449,6 +499,9 @@ class NotificationRelayService : NotificationListenerService() {
          * device's announcement an echo.
          */
         private const val SETTLE_MS = 3_000L
+        private const val HELD_MAX = 5
+        private const val HELD_TTL_MS = 30 * 60_000L
+        private const val HELD_RETRY_MS = 20_000L
 
         /**
          * `Notification.category` values that mean "this is a status display",

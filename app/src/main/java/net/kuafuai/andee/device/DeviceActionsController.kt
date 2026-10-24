@@ -54,11 +54,17 @@ class DeviceActionsController(private val context: Context) {
     private fun resolveLabel(label: String): String? {
         val pm = context.packageManager
         val launcher = Intent(Intent.ACTION_MAIN, null).addCategory(Intent.CATEGORY_LAUNCHER)
-        for (ri in pm.queryIntentActivities(launcher, 0)) {
+        val activities = pm.queryIntentActivities(launcher, 0)
+        for (ri in activities) {
             val l = runCatching { ri.loadLabel(pm).toString() }.getOrDefault("")
             if (l.equals(label, ignoreCase = true)) return ri.activityInfo.packageName
         }
-        return null
+        // GoWalkin fork: labels follow the phone's language, so "DiDi" finds
+        // nothing on a phone that calls it 滴滴出行. The alias table knows the
+        // English, pinyin and Chinese names; only an installed package counts,
+        // so a name the table maps to an app this phone lacks still fails as before.
+        val installed = activities.map { it.activityInfo.packageName }.toSet()
+        return net.kuafuai.andee.cn.AppAliases.candidates(label).firstOrNull { it in installed }
     }
 
     // ---- volume ----------------------------------------------------

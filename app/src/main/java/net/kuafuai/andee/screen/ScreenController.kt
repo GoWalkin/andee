@@ -1030,6 +1030,7 @@ class ScreenController(
         val pkg: String,         // owning app, from the node's root at dump time
         val viewId: String?,     // resource id if any
         val bounds: String,      // "l,t,r,b" in pixels at dump time
+        val label: String = "",  // what the outline showed for it — for the action guard (GoWalkin)
     )
 
     private val eidLock = Any()
@@ -1157,6 +1158,7 @@ class ScreenController(
     }
 
     fun tap(x: Int, y: Int, snapFrame: FloatArray? = null): JSONObject {
+        guardAction(x, y)
         val path = Path().apply { moveTo(x.toFloat(), y.toFloat()) }
         // 150ms, not the classic 100ms: WeChat's Moments like/comment buttons
         // (and other touch-filtering surfaces) ignore injections shorter than
@@ -1709,6 +1711,7 @@ class ScreenController(
     }
 
     fun longPress(x: Int, y: Int, durationMs: Long): JSONObject {
+        guardAction(x, y)
         val path = Path().apply { moveTo(x.toFloat(), y.toFloat()) }
         val stroke = GestureDescription.StrokeDescription(path, 0L, durationMs)
         val result = guardedGesture(android.graphics.Rect(x - 4, y - 4, x + 4, y + 4)) {
@@ -2011,6 +2014,7 @@ class ScreenController(
      * When `id` is null we use the currently focused input.
      */
     fun submitInput(id: String?): JSONObject {
+        net.kuafuai.andee.cn.ActionGate.checkSubmit(livePackage() ?: lastPkg())
         if (id == null && A11yIme.sendsOnlyFromButton(service)) {
             throw IllegalStateException(
                 "this field has no keyboard send action — it sends only from its own Send/发送 " +
@@ -2941,6 +2945,7 @@ class ScreenController(
                     pkg = pkg,
                     viewId = row.node.optString("id").ifEmpty { null },
                     bounds = row.bounds,
+                    label = row.label,
                 )
             }
             val indent = "  ".repeat(minOf(row.depth, MAX_INDENT))
@@ -3108,6 +3113,61 @@ class ScreenController(
      */
     private fun childOf(node: AccessibilityNodeInfo, i: Int): AccessibilityNodeInfo? =
         if (android.os.Build.VERSION.SDK_INT >= 33) node.getChild(i, PREFETCH_WALK) else node.getChild(i)
+
+    // ---- action guard (GoWalkin fork) ------------------------------------------
+    //
+    // Every tap and long-press asks net.kuafuai.andee.cn.ActionGate first, with
+    // the label of whatever sits under the finger: a pay button is refused, an
+    // order needs the user's fresh yes, BOSS greetings are capped and paced.
+    // The label is read LIVE first, because the index can be one screen stale
+    // after a transition, and a stale label is either a false refusal or —
+    // worse — a missed one. The index is the fallback for a tree that answers
+    // nothing live. A tree-blind pane yields no label at all and is allowed:
+    // the guard cannot see what the app does not show it.
+
+    private fun guardAction(x: Int, y: Int) {
+        val pkg = livePackage() ?: lastPkg()
+        net.kuafuai.andee.cn.ActionGate.check(pkg, liveLabelAt(x, y) ?: indexedLabelAt(x, y))
+    }
+
+    private fun livePackage(): String? = runCatching {
+        val root = activeRoot() ?: return@runCatching null
+        try { root.packageName?.toString() } finally { root.recycle() }
+    }.getOrNull()
+
+    /** The text or description of the smallest node under (x, y) that has one. */
+    private fun liveLabelAt(x: Int, y: Int): String? = runCatching {
+        val root = activeRoot() ?: return@runCatching null
+        var best: String? = null
+        var bestArea = Long.MAX_VALUE
+        val r = android.graphics.Rect()
+        var budget = 2000
+        fun walk(n: AccessibilityNodeInfo) {
+            if (--budget < 0) return
+            n.getBoundsInScreen(r)
+            if (!r.contains(x, y)) return
+            val text = (n.text ?: n.contentDescription)?.toString()?.trim().orEmpty()
+            val area = r.width().toLong() * r.height().toLong()
+            if (text.isNotEmpty() && area < bestArea) { best = text; bestArea = area }
+            for (i in 0 until n.childCount) {
+                val c = n.getChild(i) ?: continue
+                try { walk(c) } finally { c.recycle() }
+            }
+        }
+        try { walk(root) } finally { root.recycle() }
+        best
+    }.getOrNull()
+
+    private fun indexedLabelAt(x: Int, y: Int): String? = synchronized(eidLock) {
+        eidIndex.values
+            .filter { it.label.isNotEmpty() && !it.label.startsWith("#") }
+            .mapNotNull { e ->
+                val p = e.bounds.split(",").mapNotNull { it.trim().toIntOrNull() }
+                if (p.size == 4 && x in p[0]..p[2] && y in p[1]..p[3]) e to (p[2] - p[0]).toLong() * (p[3] - p[1])
+                else null
+            }
+            .minByOrNull { it.second }?.first?.label
+    }
 
     private fun activeRoot(): AccessibilityNodeInfo? =
         if (android.os.Build.VERSION.SDK_INT >= 33) service.getRootInActiveWindow(PREFETCH_WALK)

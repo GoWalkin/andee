@@ -52,6 +52,15 @@ interface BrainHost {
      */
     fun platformPrompt(): String = ""
 
+    /**
+     * Sections appended after the whole system prompt — on the GoWalkin fork, the
+     * "does not read Chinese" bridge and the user's autonomy level
+     * ([net.kuafuai.andee.cn.BridgePrompt]). Must be constant for a given
+     * setting, like the persona, so the prefix cache only misses when a switch
+     * moves. Empty by default, so a body that does not override it is unchanged.
+     */
+    fun extraPrompt(): String = ""
+
     // ---- notebook ----
 
     /** The user just spoke: restart the quiet-hour clock. */

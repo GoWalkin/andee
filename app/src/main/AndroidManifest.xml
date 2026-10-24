@@ -242,6 +242,15 @@
              screen. Not noHistory: that finishes it the moment the camera or
              the photo picker opens, and their result would have nowhere to
              land. onStop does the same job and knows when not to. -->
+        <!-- GoWalkin fork: owns the system file picker's result for
+             pick_document / read_document. Nothing of its own is drawn; not
+             noHistory, because that would finish it while the picker covers it
+             and the result would have nowhere to land. -->
+        <activity
+            android:name=".cn.DocumentPickActivity"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:excludeFromRecents="true"
+            android:exported="false" />
         <activity
             android:name=".ui.TextInputActivity"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"

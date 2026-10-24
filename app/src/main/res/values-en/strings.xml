@@ -212,6 +212,21 @@
     <string name="settings_notebook_stats">%1$d reviews (~%2$d tokens) · %3$d memories · %4$d promises open</string>
     <string name="settings_notebook_browse">See what it remembers</string>
     <string name="settings_section_notify">Notifications</string>
+    <!-- GoWalkin fork: China-assistant section -->
+    <string name="settings_section_china">China assistant</string>
+    <string name="settings_china_note">For someone who cannot read Chinese: everything on screen is explained in English, and anything sent in your name is shown to you in English first. This also decides how much it may do on its own.</string>
+    <string name="settings_reader">Can I read Chinese?</string>
+    <string name="settings_reader_auto">Follow interface</string>
+    <string name="settings_reader_en">No</string>
+    <string name="settings_reader_zh">Yes</string>
+    <string name="settings_autonomy">Autonomy</string>
+    <string name="settings_autonomy_semi">Semi-auto</string>
+    <string name="settings_autonomy_assist">Assist</string>
+    <string name="settings_autonomy_full">Full-auto</string>
+    <string name="settings_autonomy_semi_note">Semi-auto: searches and fills forms on its own, applies on BOSS直聘 within the daily cap, and sends your résumé when a recruiter asks for it. Any other message in your name, and sharing your contact details, waits for your yes. Rides and orders always ask first; paying is always yours.</string>
+    <string name="settings_autonomy_assist_note">Assist: gets everything ready up to the last button, then tells you which one to press. Never applies, sends or orders for you. Paying is always yours.</string>
+    <string name="settings_autonomy_full_note">⚠ Full-auto: replies to messages in your name within the scene\'s rules, and shows you the translation afterwards. It may say things you did not intend, and BOSS直聘 may restrict accounts that behave like this. It also goes against this project\'s acceptable-use rule to review before it speaks for you. Rides and orders still ask first; paying is still yours.</string>
+    <string name="settings_greet_cap">BOSS直聘 applications per day</string>
     <string name="settings_notify_chat">Chat apps</string>
     <string name="settings_notify_all">Everything</string>
     <string name="settings_notify_note">When a message arrives it decides for itself whether it is worth your attention: lets the noise go, says the useful part out loud, handles what needs handling. \"Chat apps\" means the ones with a person on the other end — WeChat, QQ, DingTalk, Lark, SMS. \"Everything\" watches the rest too, minus progress bars and permanent notifications. It only puts a card up when it cannot decide. Off means nothing interrupts you — the messages are all still there, and you can ask about them whenever.</string>
@@ -554,6 +569,13 @@
     <string name="check_detail_model_balance">The server answered %1$s: most likely the account is out of balance. Top up on the current provider\'s website and try again.</string>
     <string name="check_detail_model_name">No model called “%1$s” on this server. It offers: %2$s</string>
     <string name="check_detail_model_other">%1$s</string>
+    <string name="check_title_brain_skills">Model can see and use tools</string>
+    <string name="check_detail_brain_skills_ok">%1$s reads screenshots and calls tools.</string>
+    <string name="check_detail_brain_skills_no_vision">%1$s refuses images, and every step needs a screenshot. Pick a vision model (Qwen-VL, GLM-4V…). The gateway said: %2$s</string>
+    <string name="check_detail_brain_skills_no_tools">%1$s refuses tool calls, so it cannot touch the screen. Pick a model with function calling. The gateway said: %2$s</string>
+    <string name="check_detail_brain_skills_prose">%1$s answered in prose instead of calling the tool, so its hands may not work. Behind a router like FreeLLMAPI, pin one vision + tools model instead of auto.</string>
+    <string name="check_detail_brain_skills_waiting">Waits until the Model row above is green.</string>
+    <string name="check_detail_brain_skills_other">Could not be tested: %1$s</string>
     <!-- The one row that is about the app rather than the device, and the one
          place this app sends anything outward. %1$s is always the release to
          move to and %2$s is always the build in hand; the two rows differ by a
@@ -562,6 +584,7 @@
     <string name="check_detail_version_stale">%1$s is available; you are on %2$s. The old one still works — update whenever you like.</string>
     <string name="check_detail_version_forced">Update to %1$s. The build you are on (%2$s) is no longer supported.</string>
     <string name="check_detail_version_offline">Offline, so not tested. You are on %1$s.</string>
+    <string name="check_detail_version_off">Update check is off in this build; nothing is reported anywhere. You are on %1$s.</string>
     <string name="check_detail_version_quota">Today\'s checks are used up; they reset tomorrow. You are on %1$s.</string>
     <string name="check_detail_version_unreachable">Could not be checked: %1$s. You are on %2$s.</string>
     <string name="check_detail_notif_on">Granted, and the listener is bound.</string>

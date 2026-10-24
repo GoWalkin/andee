@@ -51,6 +51,16 @@ android {
         buildConfigField "String",  "DEFAULT_LANG",            buildConfigString('DEFAULT_LANG')
         buildConfigField "String",  "DEFAULT_THINKING",        buildConfigString('DEFAULT_THINKING')
 
+        // GoWalkin fork: the update/version check address. Upstream compiled
+        // https://api.heyandee.com in as a constant; blank (the default here)
+        // means the check is never made, so nothing about this device is sent
+        // to anyone. Put the upstream URL back in local.properties to re-enable.
+        buildConfigField "String",  "VERSION_API_BASE",        buildConfigString('VERSION_API_BASE')
+        // GoWalkin fork: defaults for the "I don't read Chinese" bridge and the
+        // autonomy switch, so a build can be packaged for its person. Blank =
+        // the code's own defaults (bridge follows the UI language; semi-auto).
+        buildConfigField "String",  "DEFAULT_READER_LANG",     buildConfigString('DEFAULT_READER_LANG')
+
         // The Google voice path, baked in at package time.
         //
         // Same rule as CODEFLYING_KEY above and for the same reason: a key in

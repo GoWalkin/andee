@@ -13,8 +13,11 @@ name: build
 
 on:
   push:
-    branches: [main]
+    # GoWalkin fork: feature branches build too, so every push yields an
+    # installable debug APK artifact without opening a PR first.
+    branches: [main, 'feature/**']
   pull_request:
+  workflow_dispatch:
 
 jobs:
   debug-apk:
@@ -30,6 +33,10 @@ jobs:
       - uses: gradle/actions/setup-gradle@v3
 
       - run: ./gradlew --no-daemon :app:assembleDebug
+
+      # The real unit tests live in core/ (brain guards, friends, the GoWalkin
+      # action guard and app aliases). Upstream CI never ran them.
+      - run: ./gradlew --no-daemon :core:test
 
       # Host-side tests are template-only today, so this is a tripwire for the
       # day someone writes a real one rather than a meaningful gate now.

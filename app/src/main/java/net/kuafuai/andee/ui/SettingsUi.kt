@@ -365,6 +365,7 @@ class SettingsUi(
         // the credentials it can spend. 大脑 stays first because it is the one
         // setting that changes what the rest of the card means.
         brainSection(form)
+        chinaSection(form)
         // 外观 is the only appearance setting left up here: 形象与表情 moved into 高级,
         // so the "these two are the same kind of setting" argument went with it. What is
         // left in 常用 is what a person opens settings to change.
@@ -1275,6 +1276,64 @@ class SettingsUi(
      * deciding how chatty this thing is allowed to be should find both decisions
      * in one place.
      */
+    /**
+     * GoWalkin fork: the three settings that make this an assistant for someone
+     * living in China who cannot read Chinese.
+     *
+     * Right under the brain because they decide what the brain is *allowed to
+     * do*, which is the first thing a user deciding whether to trust it needs to
+     * find. Autonomy is a picker with no tool behind it: only a finger on this
+     * card can widen it, the same principle as the gear-visibility switch. The
+     * note under it is rewritten as the thumb moves, so choosing Full-auto is
+     * never done without reading what it means.
+     */
+    private fun chinaSection(form: LinearLayout) {
+        val panel = group(
+            form,
+            lctx.getString(R.string.settings_section_china),
+            lctx.getString(R.string.settings_china_note),
+        )
+        rowLabel(panel, lctx.getString(R.string.settings_reader))
+        segmented(
+            panel,
+            "reader",
+            listOf(
+                VoiceConfig.READER_AUTO to lctx.getString(R.string.settings_reader_auto),
+                VoiceConfig.READER_EN to lctx.getString(R.string.settings_reader_en),
+                VoiceConfig.READER_ZH to lctx.getString(R.string.settings_reader_zh),
+            ),
+        )
+        rowLabel(panel, lctx.getString(R.string.settings_autonomy))
+        val autonomyNote = noteView("")
+        fun describe(level: String) {
+            autonomyNote.text = lctx.getString(
+                when (level) {
+                    "assist" -> R.string.settings_autonomy_assist_note
+                    "full" -> R.string.settings_autonomy_full_note
+                    else -> R.string.settings_autonomy_semi_note
+                },
+            )
+        }
+        val start = segmented(
+            panel,
+            "autonomy",
+            listOf(
+                "semi" to lctx.getString(R.string.settings_autonomy_semi),
+                "assist" to lctx.getString(R.string.settings_autonomy_assist),
+                "full" to lctx.getString(R.string.settings_autonomy_full),
+            ),
+        ) { describe(it) }
+        describe(start)
+        panel.addView(autonomyNote, rowParams(dp(10)))
+        field(
+            panel,
+            "greet_cap",
+            lctx.getString(R.string.settings_greet_cap),
+            hint = net.kuafuai.andee.cn.ActionGuard.DEFAULT_GREET_CAP.toString(),
+            numeric = true,
+        )
+    }
+
     private fun notifySection(form: LinearLayout) {
         val panel = group(form, lctx.getString(R.string.settings_section_notify))
         // 关 leftmost, which is the fallback for an unrecognised saved value —

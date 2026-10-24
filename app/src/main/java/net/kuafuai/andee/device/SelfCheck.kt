@@ -232,6 +232,7 @@ object SelfCheck {
     fun run(context: Context, probe: Boolean = true): List<Finding> {
         val online = isOnline(context)
         val a11yIme = imeChannelOpen()
+        val backendRow = backend(context, probe, online)
         // listOfNotNull rather than listOf: one row only exists on API 33+ — see
         // [postNotifications], which is where the reasoning lives.
         return listOfNotNull(
@@ -246,7 +247,11 @@ object SelfCheck {
             accessibility(context),
             network(online),
             brain(context),
-            backend(context, probe, online),
+            backendRow,
+            // GoWalkin fork: only asked once the row above is green — a wrong
+            // URL or key would otherwise be reported twice, the second time as a
+            // misleading "this model cannot see".
+            brainSkills(context, probe, online, backendRow.level == Level.OK),
             version(context, probe, online),
             microphone(context),
             // The ball being heard, right above the ball hearing: the two are easy to
@@ -277,7 +282,7 @@ object SelfCheck {
      * the raw facts calls [run]. Nothing outside should be matching on these
      * ids by hand.
      */
-    private val PROBED_IDS = setOf("backend", "version", "voice_host")
+    private val PROBED_IDS = setOf("backend", "brain_skills", "version", "voice_host")
 
     /**
      * Splice a fresh no-probe pass over the last full one.
@@ -490,6 +495,78 @@ object SelfCheck {
     }
 
     /**
+     * Can the configured model read a screenshot and call a tool? (GoWalkin fork.)
+     *
+     * A separate row from [backend] because it is a separate failure: the URL,
+     * key and model name can all be right for a text-only model, which then
+     * answers `hi` perfectly and fails on the first tap. Behind a router that
+     * stacks free tiers this is the likeliest misconfiguration there is, so it
+     * is [Level.FAIL] when either skill is refused and [Level.WARN] when the
+     * model answers in prose instead of calling the tool. Costs one small real
+     * request, see [net.kuafuai.andee.cn.BrainSkills].
+     */
+    private fun brainSkills(context: Context, probe: Boolean, online: Boolean, backendOk: Boolean): Finding? {
+        val bc = VoiceConfig.brainConfig(context)
+        if (!bc.isLocal || bc.apiKey.isEmpty()) return null
+        if (!probe || !online || !backendOk) {
+            return Finding(
+                id = "brain_skills",
+                title = R.string.check_title_brain_skills,
+                level = Level.NOTE,
+                detail = if (!online) R.string.check_detail_skipped_offline
+                else if (probe) R.string.check_detail_brain_skills_waiting
+                else R.string.check_detail_checking,
+            )
+        }
+        return when (val r = net.kuafuai.andee.cn.BrainSkills.probe(bc.baseUrl, bc.apiKey, bc.model)) {
+            net.kuafuai.andee.cn.BrainSkills.Result.Ok -> Finding(
+                id = "brain_skills",
+                title = R.string.check_title_brain_skills,
+                level = Level.OK,
+                detail = R.string.check_detail_brain_skills_ok,
+                detailArgs = listOf(bc.model),
+            )
+            is net.kuafuai.andee.cn.BrainSkills.Result.NoVision -> Finding(
+                id = "brain_skills",
+                title = R.string.check_title_brain_skills,
+                level = Level.FAIL,
+                detail = R.string.check_detail_brain_skills_no_vision,
+                detailArgs = listOf(bc.model, r.detail),
+                fix = Fix.OurSettings,
+            )
+            is net.kuafuai.andee.cn.BrainSkills.Result.NoTools -> Finding(
+                id = "brain_skills",
+                title = R.string.check_title_brain_skills,
+                level = Level.FAIL,
+                detail = R.string.check_detail_brain_skills_no_tools,
+                detailArgs = listOf(bc.model, r.detail),
+                fix = Fix.OurSettings,
+            )
+            is net.kuafuai.andee.cn.BrainSkills.Result.NoToolCall -> Finding(
+                id = "brain_skills",
+                title = R.string.check_title_brain_skills,
+                level = Level.WARN,
+                detail = R.string.check_detail_brain_skills_prose,
+                detailArgs = listOf(bc.model),
+                fix = Fix.OurSettings,
+            )
+            net.kuafuai.andee.cn.BrainSkills.Result.Throttled -> Finding(
+                id = "brain_skills",
+                title = R.string.check_title_brain_skills,
+                level = Level.NOTE,
+                detail = R.string.check_detail_model_throttled,
+            )
+            is net.kuafuai.andee.cn.BrainSkills.Result.Other -> Finding(
+                id = "brain_skills",
+                title = R.string.check_title_brain_skills,
+                level = Level.NOTE,
+                detail = R.string.check_detail_brain_skills_other,
+                detailArgs = listOf(r.detail),
+            )
+        }
+    }
+
+    /**
      * Whether this copy of the app is the one we think you should be running.
      *
      * **The only row here that is about the app rather than the device**, and
@@ -527,17 +604,25 @@ object SelfCheck {
      * place the app can answer "what version am I on?" — there is no
      * version number anywhere in Settings.
      *
-     * **The address is a constant, deliberately.** [VERSION_API_BASE] is written
-     * into this file and cannot be changed without editing the source and
-     * rebuilding: there is no setting, no build property and no `local.properties`
-     * key behind it. That is the point — a check that a user can silently
-     * misconfigure is a check that silently stops working, and this one is meant
-     * to be either on for everyone or off for everyone. The cost is that the
-     * repository has no build-time switch to turn reporting off; the honest
-     * description of that is in `docs/permissions.md`, which is the file to keep
-     * in step with this function.
+     * **The address is fixed at build time, and this fork ships it blank.**
+     * [VERSION_API_BASE] comes from `VERSION_API_BASE` in `local.properties`
+     * (GoWalkin fork change): upstream compiled `https://api.heyandee.com` in as a
+     * constant, which meant a fork kept reporting its model, brand and package to
+     * the upstream maintainers' server. Blank means the probe is never made and
+     * the row says so — still a build-wide decision, never a user setting, so the
+     * "silently misconfigured" argument upstream made for a constant still holds.
+     * Keep `docs/permissions.md` in step with this function.
      */
     private fun version(context: Context, probe: Boolean, online: Boolean): Finding {
+        if (VERSION_API_BASE.isBlank()) {
+            return Finding(
+                id = "version",
+                title = R.string.check_title_version,
+                level = Level.NOTE,
+                detail = R.string.check_detail_version_off,
+                detailArgs = listOf(BuildConfig.VERSION_NAME),
+            )
+        }
         if (!probe || !online) {
             return Finding(
                 id = "version",
@@ -1485,7 +1570,7 @@ object SelfCheck {
      * address, so a device on the wrong resolver reports Unreachable for as long
      * as that lasts. That is the intended failure, not a bug in the check.
      */
-    private const val VERSION_API_BASE = "https://api.heyandee.com"
+    private val VERSION_API_BASE: String = BuildConfig.VERSION_API_BASE.trim()
 
     /**
      * The whole-call ceiling on the version probe, in milliseconds.

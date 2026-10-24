@@ -707,6 +707,10 @@ object VoiceConfig {
                     "sweep_daily_cap", DEFAULT_SWEEP_DAILY_CAP.toString(),
                 )!!,
                 "max_steps" to maxSteps(context).toString(),
+                // GoWalkin fork: the China-assistant section.
+                "reader" to readerSetting(context),
+                "autonomy" to autonomy(context),
+                "greet_cap" to p.getString("greet_cap", "").orEmpty(),
             )
         }
 
@@ -751,6 +755,9 @@ object VoiceConfig {
 
         const val LANG_ZH = "zh"
         const val LANG_EN = "en"
+        const val READER_AUTO = "auto"
+        const val READER_EN = "en"
+        const val READER_ZH = "zh"
 
         /**
          * Which language the user-facing UI speaks. [LANG_ZH] or [LANG_EN].
@@ -771,6 +778,54 @@ object VoiceConfig {
             context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("mute", "") == "1"
 
         fun setMuted(context: Context, on: Boolean) = save(context, mapOf("mute" to if (on) "1" else "0"))
+
+        /**
+         * GoWalkin fork: does the person holding this device need the bridge —
+         * English for everything, Chinese labels glossed, drafts back-translated
+         * ([net.kuafuai.andee.cn.BridgePrompt])?
+         *
+         * `reader` is `auto` | `en` | `zh`. `auto` (and anything unrecognised,
+         * the picker's leftmost option) follows the build's `DEFAULT_READER_LANG`
+         * and then the interface language: an English interface is the strongest
+         * signal there is that the screen's Chinese is not readable to them.
+         */
+        fun readerNeedsBridge(context: Context): Boolean {
+            val saved = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .getString("reader", "").orEmpty().trim().lowercase()
+            if (saved == READER_EN) return true
+            if (saved == READER_ZH) return false
+            when (BuildConfig.DEFAULT_READER_LANG.trim().lowercase()) {
+                READER_EN -> return true
+                READER_ZH -> return false
+            }
+            return uiLanguage(context) == LANG_EN
+        }
+
+        fun readerSetting(context: Context): String =
+            when (context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .getString("reader", "").orEmpty().trim().lowercase()) {
+                READER_EN -> READER_EN
+                READER_ZH -> READER_ZH
+                else -> READER_AUTO
+            }
+
+        /**
+         * GoWalkin fork: how much the brain may do without asking — `semi`,
+         * `assist` or `full`. Anything else reads as `semi`, the default and the
+         * picker's leftmost option. Enforced in code by
+         * [net.kuafuai.andee.cn.ActionGate]; there is deliberately no tool that
+         * writes it, so only the user, on the settings card, can widen it.
+         */
+        fun autonomy(context: Context): String =
+            net.kuafuai.andee.cn.ActionGuard.Autonomy.parse(
+                context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("autonomy", ""),
+            ).name.lowercase()
+
+        /** GoWalkin fork: the most BOSS直聘 applications a day, 1–150. Blank or junk is the default. */
+        fun greetCap(context: Context): Int =
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("greet_cap", "")
+                ?.trim()?.toIntOrNull()?.coerceIn(1, 150)
+                ?: net.kuafuai.andee.cn.ActionGuard.DEFAULT_GREET_CAP
 
         fun uiLanguage(context: Context): String {
             val saved = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -930,5 +985,7 @@ object VoiceConfig {
             "ball",
             "sweep", "sweep_quiet_minutes", "sweep_daily_cap",
             "max_steps",
+            // GoWalkin fork: reader language, autonomy level, BOSS daily cap.
+            "reader", "autonomy", "greet_cap",
         )
 }

@@ -189,6 +189,21 @@
     <string name="settings_notebook_stats">复盘 %1$d 次（约 %2$d tokens）· 记住 %3$d 条 · 还欠着 %4$d 件事</string>
     <string name="settings_notebook_browse">看它记得的事</string>
     <string name="settings_section_notify">消息提醒</string>
+    <!-- GoWalkin fork: China-assistant section -->
+    <string name="settings_section_china">中国生活助手</string>
+    <string name="settings_china_note">给看不懂中文的人用：界面上的中文都会翻成英文，替你发出去的话先给你看英文意思。下面也决定它可以自己做多少事。</string>
+    <string name="settings_reader">我能看懂中文吗</string>
+    <string name="settings_reader_auto">跟随界面语言</string>
+    <string name="settings_reader_en">看不懂</string>
+    <string name="settings_reader_zh">看得懂</string>
+    <string name="settings_autonomy">自主程度</string>
+    <string name="settings_autonomy_semi">半自动</string>
+    <string name="settings_autonomy_assist">只协助</string>
+    <string name="settings_autonomy_full">全自动</string>
+    <string name="settings_autonomy_semi_note">半自动：可以自己搜索、填表，在 BOSS直聘 上按每日上限投递，招聘方要简历时可以直接发。其他替你发的消息、交换联系方式，都先问你。叫车、下单永远先问你，付款永远是你自己。</string>
+    <string name="settings_autonomy_assist_note">只协助：它把一切准备到最后一个按钮，然后告诉你按哪里。不会替你投递、发消息、下单。付款永远是你自己。</string>
+    <string name="settings_autonomy_full_note">⚠ 全自动：它会在场景规则内直接以你的名义回复消息，事后给你看译文。可能说出你没打算说的话；BOSS直聘 也可能因此限制账号。这也不符合本项目使用政策里「对外发言前先过目」的要求。叫车、下单仍然先问你，付款仍然是你自己。</string>
+    <string name="settings_greet_cap">BOSS直聘 每日投递上限</string>
     <string name="settings_notify_chat">聊天类</string>
     <string name="settings_notify_all">全部</string>
     <string name="settings_notify_note">来消息的时候，它先自己看一眼值不值当：没事的就放过，要紧的说一声，该办的直接去办。「聊天类」是微信、QQ、钉钉、飞书、短信这些有人在那头的；「全部」连其它 App 也一起看（进度条、常驻通知除外）。拿不准的才弹牌子问你。关掉就谁也不打扰你 —— 消息都还在，想知道的时候问它一声就行。</string>
@@ -639,6 +654,13 @@
     <string name="check_detail_model_balance">服务端返回 %1$s：多半是账户余额不足。去当前服务商的官网充值后再试。</string>
     <string name="check_detail_model_name">模型名「%1$s」不在服务端列表里。这台服务上有的：%2$s</string>
     <string name="check_detail_model_other">%1$s</string>
+    <string name="check_title_brain_skills">模型能看图、能用工具</string>
+    <string name="check_detail_brain_skills_ok">%1$s 看得懂截图，也会调用工具。</string>
+    <string name="check_detail_brain_skills_no_vision">%1$s 不接受图片，可每一步操作都要看截图。换一个支持视觉的模型（比如 Qwen-VL、GLM-4V）。网关原话：%2$s</string>
+    <string name="check_detail_brain_skills_no_tools">%1$s 不接受工具调用，没法点屏幕。换一个支持 function calling 的模型。网关原话：%2$s</string>
+    <string name="check_detail_brain_skills_prose">%1$s 只用文字回答，没有调用工具。它可能连不上手。用路由（如 FreeLLMAPI）时请固定一个支持视觉和工具的模型，别用 auto。</string>
+    <string name="check_detail_brain_skills_waiting">等上面「模型连通」通了再测。</string>
+    <string name="check_detail_brain_skills_other">测不出来：%1$s</string>
     <!-- 版本这条是全表唯一「关于 App 自己」而不是「关于这台设备」的检查，也是
          唯一一次主动往外发东西。%1$s 恒为「该升到的版本」，%2$s 恒为「你手上这个」，
          两条文案的参数顺序不许对调。见 SelfCheck.version。 -->
@@ -646,6 +668,7 @@
     <string name="check_detail_version_stale">有新版本 %1$s，你现在是 %2$s。旧的还能用，想换再换。</string>
     <string name="check_detail_version_forced">请更新到 %1$s —— 你现在这个（%2$s）已经不再支持了。</string>
     <string name="check_detail_version_offline">没网，先不测。当前 %1$s。</string>
+    <string name="check_detail_version_off">这个版本关闭了更新检查，不向任何服务器上报。当前 %1$s。</string>
     <string name="check_detail_version_quota">今天的检查次数用完了，明天恢复。当前 %1$s。</string>
     <string name="check_detail_version_unreachable">查不到：%1$s。当前是 %2$s。</string>
     <string name="check_detail_notif_on">已授权，监听器也连着。</string>

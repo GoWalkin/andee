@@ -99,8 +99,10 @@ notebook only it can read. The examples below show you its **hands**.
 
 **The boundary belongs with the capability, because it is what makes the rest usable.** It fills a page up to the last  
 button and leaves that button to you; it stops before the final confirmation of a purchase and **never  
-enters a payment password**. Those rules are in the dispatcher, not in a prompt — a page that tells it  
-otherwise does not get its way.
+enters a payment password**. *(GoWalkin fork note: upstream enforced this only in the prompt. This fork adds a
+real check in code, `cn/ActionGuard`: a tap on a pay button is refused, and an order button needs the user's
+fresh yes. It reads button labels, so self-drawn screens such as mini-programs are still prompt-only. See
+[FORK.md](FORK.md).)*
 
 What it can do comes in two kinds: the **one-liner** and the **long haul**. The long ones it calls  
 **scenes** — a goal, a voice and a routine it steps into for a while. Four are ready-made, under  
