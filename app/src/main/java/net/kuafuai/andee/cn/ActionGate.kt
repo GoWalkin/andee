@@ -55,11 +55,12 @@ object ActionGate {
     }
 
     /**
-     * Throws when a tap on [label] in [pkg] is not allowed; records what an
-     * allowed one costs. A label that classifies as nothing returns at once.
+     * Throws when a tap on an element labelled [labels] (everything under the
+     * finger, smallest first) in [pkg] is not allowed; records what an allowed
+     * one costs. Labels that classify as nothing return at once.
      */
-    fun check(pkg: String?, label: String?) {
-        val kind = ActionGuard.classify(pkg, label) ?: return
+    fun check(pkg: String?, labels: List<String>) {
+        val (kind, label) = ActionGuard.classifyAny(pkg, labels) ?: return
         decide(kind, pkg, label)
     }
 

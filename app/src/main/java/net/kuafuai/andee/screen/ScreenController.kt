@@ -3127,7 +3127,11 @@ class ScreenController(
 
     private fun guardAction(x: Int, y: Int) {
         val pkg = livePackage() ?: lastPkg()
-        net.kuafuai.andee.cn.ActionGate.check(pkg, liveLabelAt(x, y) ?: indexedLabelAt(x, y))
+        // Every labelled element under the finger, smallest first — not just the
+        // smallest: a tap on the price text inside a 确认呼叫 ¥23 button lands on
+        // "¥23", and only its parent says what the button does.
+        val labels = liveLabelsAt(x, y).ifEmpty { indexedLabelsAt(x, y) }
+        net.kuafuai.andee.cn.ActionGate.check(pkg, labels)
     }
 
     private fun livePackage(): String? = runCatching {
@@ -3135,11 +3139,10 @@ class ScreenController(
         try { root.packageName?.toString() } finally { root.recycle() }
     }.getOrNull()
 
-    /** The text or description of the smallest node under (x, y) that has one. */
-    private fun liveLabelAt(x: Int, y: Int): String? = runCatching {
-        val root = activeRoot() ?: return@runCatching null
-        var best: String? = null
-        var bestArea = Long.MAX_VALUE
+    /** Text or description of every node whose bounds contain (x, y), smallest first. */
+    private fun liveLabelsAt(x: Int, y: Int): List<String> = runCatching {
+        val root = activeRoot() ?: return@runCatching emptyList()
+        val found = ArrayList<Pair<String, Long>>()
         val r = android.graphics.Rect()
         var budget = 2000
         fun walk(n: AccessibilityNodeInfo) {
@@ -3147,26 +3150,26 @@ class ScreenController(
             n.getBoundsInScreen(r)
             if (!r.contains(x, y)) return
             val text = (n.text ?: n.contentDescription)?.toString()?.trim().orEmpty()
-            val area = r.width().toLong() * r.height().toLong()
-            if (text.isNotEmpty() && area < bestArea) { best = text; bestArea = area }
+            if (text.isNotEmpty()) found += text to r.width().toLong() * r.height().toLong()
             for (i in 0 until n.childCount) {
                 val c = n.getChild(i) ?: continue
                 try { walk(c) } finally { c.recycle() }
             }
         }
         try { walk(root) } finally { root.recycle() }
-        best
-    }.getOrNull()
+        found.sortedBy { it.second }.map { it.first }
+    }.getOrDefault(emptyList())
 
-    private fun indexedLabelAt(x: Int, y: Int): String? = synchronized(eidLock) {
+    private fun indexedLabelsAt(x: Int, y: Int): List<String> = synchronized(eidLock) {
         eidIndex.values
             .filter { it.label.isNotEmpty() && !it.label.startsWith("#") }
             .mapNotNull { e ->
                 val p = e.bounds.split(",").mapNotNull { it.trim().toIntOrNull() }
-                if (p.size == 4 && x in p[0]..p[2] && y in p[1]..p[3]) e to (p[2] - p[0]).toLong() * (p[3] - p[1])
+                if (p.size == 4 && x in p[0]..p[2] && y in p[1]..p[3]) e.label to (p[2] - p[0]).toLong() * (p[3] - p[1])
                 else null
             }
-            .minByOrNull { it.second }?.first?.label
+            .sortedBy { it.second }
+            .map { it.first }
     }
 
     private fun activeRoot(): AccessibilityNodeInfo? =

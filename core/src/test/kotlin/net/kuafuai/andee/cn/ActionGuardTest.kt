@@ -80,6 +80,16 @@ class ActionGuardTest {
         assertNull(ActionGuard.classify(boss, null))
     }
 
+    @Test
+    fun theButtonAroundThePriceIsWhatCounts() {
+        // The finger is on "¥23.50"; its parent is the call button.
+        assertEquals(Kind.ORDER to "确认呼叫 ¥23.50", ActionGuard.classifyAny(didi, listOf("¥23.50", "确认呼叫 ¥23.50")))
+        // Paying outranks ordering when both are under the finger.
+        assertEquals(Kind.PAY, ActionGuard.classifyAny(didi, listOf("呼叫快车", "立即支付"))!!.first)
+        assertNull(ActionGuard.classifyAny(didi, listOf("¥23.50", "快车")))
+        assertNull(ActionGuard.classifyAny(didi, emptyList()))
+    }
+
     // ---- decisions ---------------------------------------------------------
 
     private val now = 1_000_000_000L

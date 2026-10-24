@@ -26,6 +26,7 @@ package net.kuafuai.andee.cn
  */
 object ActionGuard {
 
+    /** In order of severity — [classifyAny] relies on it. */
     enum class Kind {
         /** Pays money now. Never tapped by the body, at any autonomy. */
         PAY,
@@ -33,14 +34,14 @@ object ActionGuard {
         /** Places an order that will cost money (calling a car, submitting an order). Needs a fresh yes. */
         ORDER,
 
+        /** Sends words or personal contact details to a third party in a guarded chat app. */
+        SEND,
+
         /** A job application / first greeting on BOSS直聘. Daily cap and pacing. */
         GREET,
 
         /** A routine reply the user pre-approved by choosing semi-auto: sending the attachment résumé. */
         ROUTINE,
-
-        /** Sends words or personal contact details to a third party in a guarded chat app. */
-        SEND,
     }
 
     /**
@@ -121,6 +122,16 @@ object ActionGuard {
         if (SEND_PACKAGES.any { p.startsWith(it) } && matches(l, SEND)) return Kind.SEND
         return null
     }
+
+    /**
+     * The most serious kind any of [labels] classifies as, with the label that
+     * earned it. The caller passes every labelled element under the finger,
+     * because the one the finger is literally on is often a child (the price
+     * inside a pay button) that says nothing about what the button does.
+     * Severity is the order of [Kind]: paying outranks ordering outranks sending.
+     */
+    fun classifyAny(pkg: String?, labels: List<String>): Pair<Kind, String>? =
+        labels.mapNotNull { l -> classify(pkg, l)?.let { it to l } }.minByOrNull { it.first.ordinal }
 
     fun decide(kind: Kind, autonomy: Autonomy, state: State, now: Long): Decision {
         val approved = state.approvalAt > 0 && now - state.approvalAt in 0..APPROVAL_TTL_MS
