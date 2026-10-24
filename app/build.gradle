@@ -154,6 +154,16 @@ android {
     kotlinOptions {
         jvmTarget = '1.8'
     }
+    // GoWalkin fork: GoldenTextTest regenerates its snapshots under
+    // `-Dgolden.update=true`, but a -D on the command line only reaches Gradle's
+    // own JVM, not the one the unit tests are forked into. Forward it only when
+    // it was given, so a plain run still compares against the snapshots.
+    testOptions {
+        unitTests.all {
+            def goldenUpdate = System.getProperty('golden.update')
+            if (goldenUpdate != null) systemProperty 'golden.update', goldenUpdate
+        }
+    }
 }
 
 dependencies {
